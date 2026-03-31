@@ -25,20 +25,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-darkbg dark:text-gray-200 min-h-screen pb-20">
 
-    <div id="authView" class="min-h-screen flex flex-col justify-center items-center p-6 bg-white dark:bg-darkbg z-50 fixed inset-0">
-        <div class="text-center mb-8">
-            <i class="fa-solid fa-vault text-6xl text-blue-500 mb-4"></i>
-            <h1 class="text-3xl font-bold">PromptVault</h1>
-            <p class="text-gray-500 dark:text-gray-400 mt-2">Tvůj osobní trezor na AI prompty</p>
-        </div>
-        <div class="w-full max-w-sm bg-gray-100 dark:bg-darkcard p-6 rounded-2xl shadow-lg">
-            <input type="email" id="emailInput" placeholder="E-mail" class="w-full p-3 mb-4 rounded-xl border-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
-            <input type="password" id="passwordInput" placeholder="Heslo" class="w-full p-3 mb-6 rounded-xl border-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
-            <button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold shadow-md hover:bg-blue-700 transition">Přihlásit / Registrovat</button>
-        </div>
-    </div>
-
-    <div id="appView" class="hidden">
+    <div id="appView">
         
         <header class="sticky top-0 bg-white/80 dark:bg-darkbg/80 backdrop-blur-md z-40 p-4 flex justify-between items-center shadow-sm">
             <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-vault text-blue-500"></i> PromptVault</h2>
@@ -53,10 +40,10 @@
                 <input type="text" id="searchInput" onkeyup="renderPrompts()" placeholder="Hledat prompty..." class="w-full pl-10 p-3 rounded-xl bg-white dark:bg-darkcard shadow-sm border-none focus:ring-2 focus:ring-blue-500 dark:text-white">
             </div>
             <div class="flex gap-2 mt-4 overflow-x-auto pb-2" id="filterTags">
-                <span onclick="setFilter('Vše')" class="filter-tag cursor-pointer px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm whitespace-nowrap">Vše</span>
-                <span onclick="setFilter('Práce')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap">Práce</span>
-                <span onclick="setFilter('Kódování')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap">Kódování</span>
-                <span onclick="setFilter('Zábava')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap">Zábava</span>
+                <span onclick="setFilter('Vše')" class="filter-tag cursor-pointer px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm whitespace-nowrap transition-colors">Vše</span>
+                <span onclick="setFilter('Práce')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap transition-colors">Práce</span>
+                <span onclick="setFilter('Kódování')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap transition-colors">Kódování</span>
+                <span onclick="setFilter('Zábava')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap transition-colors">Zábava</span>
             </div>
         </div>
 
@@ -77,86 +64,69 @@
                     <p>Oblíbených: <span id="statFav" class="font-bold text-yellow-500">0</span></p>
                 </div>
                 <div class="space-y-3">
-                    <button onclick="exportJSON()" class="w-full bg-green-500 text-white p-3 rounded-xl font-bold shadow-md"><i class="fa-solid fa-download mr-2"></i> Exportovat prompty (JSON)</button>
-                    <label class="w-full flex justify-center items-center bg-purple-500 text-white p-3 rounded-xl font-bold shadow-md cursor-pointer">
+                    <button onclick="exportJSON()" class="w-full bg-green-500 text-white p-3 rounded-xl font-bold shadow-md hover:bg-green-600 transition"><i class="fa-solid fa-download mr-2"></i> Exportovat prompty (JSON)</button>
+                    <label class="w-full flex justify-center items-center bg-purple-500 text-white p-3 rounded-xl font-bold shadow-md cursor-pointer hover:bg-purple-600 transition">
                         <i class="fa-solid fa-upload mr-2"></i> Importovat prompty
                         <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" class="hidden">
                     </label>
-                    <button onclick="logout()" class="w-full bg-red-500 text-white p-3 rounded-xl font-bold shadow-md mt-6"><i class="fa-solid fa-sign-out-alt mr-2"></i> Odhlásit se</button>
                 </div>
             </div>
         </main>
 
-        <button onclick="openModal()" class="fixed bottom-24 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg text-2xl flex justify-center items-center hover:bg-blue-700 transition z-40 transform hover:scale-105">
+        <button onclick="openModal()" class="fixed bottom-24 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg text-2xl flex justify-center items-center hover:bg-blue-700 transition z-40 transform hover:scale-105 active:scale-95">
             <i class="fa-solid fa-plus"></i>
         </button>
 
         <nav class="fixed bottom-0 w-full bg-white dark:bg-darkcard border-t dark:border-gray-800 flex justify-around p-3 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40">
-            <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex flex-col items-center text-blue-600">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex flex-col items-center text-blue-600 transition-colors">
                 <i class="fa-solid fa-house text-xl mb-1"></i>
                 <span class="text-xs">Domů</span>
             </button>
-            <button onclick="switchTab('favorites')" id="nav-favorites" class="nav-btn flex flex-col items-center text-gray-400 dark:text-gray-500">
+            <button onclick="switchTab('favorites')" id="nav-favorites" class="nav-btn flex flex-col items-center text-gray-400 dark:text-gray-500 transition-colors">
                 <i class="fa-solid fa-star text-xl mb-1"></i>
                 <span class="text-xs">Oblíbené</span>
             </button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center text-gray-400 dark:text-gray-500">
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center text-gray-400 dark:text-gray-500 transition-colors">
                 <i class="fa-solid fa-gear text-xl mb-1"></i>
                 <span class="text-xs">Nastavení</span>
             </button>
         </nav>
     </div>
 
-    <div id="promptModal" class="hidden fixed inset-0 bg-black/50 z-50 flex justify-center items-end sm:items-center">
-        <div class="bg-white dark:bg-darkcard w-full sm:w-[400px] h-[80vh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col transform transition-transform shadow-2xl">
+    <div id="promptModal" class="hidden fixed inset-0 bg-black/50 z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
+        <div class="bg-white dark:bg-darkcard w-full sm:w-[450px] h-[85vh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modalTitle" class="text-xl font-bold">Nový Prompt</h3>
-                <button onclick="closeModal()" class="text-gray-500 text-xl"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closeModal()" class="text-gray-500 text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <input type="hidden" id="promptId">
-            <input type="text" id="promptTitle" placeholder="Název (např. Generátor emailů)" class="w-full p-3 mb-3 border dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white">
-            <select id="promptTag" class="w-full p-3 mb-3 border dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white">
+            <input type="text" id="promptTitle" placeholder="Název (např. Generátor emailů)" class="w-full p-3 mb-3 border dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+            <select id="promptTag" class="w-full p-3 mb-3 border dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="Práce">Práce</option>
                 <option value="Kódování">Kódování</option>
                 <option value="Zábava">Zábava</option>
                 <option value="Ostatní">Ostatní</option>
             </select>
-            <textarea id="promptText" placeholder="Zde vlož text promptu..." class="w-full p-3 mb-4 border dark:border-gray-700 rounded-xl flex-1 resize-none dark:bg-gray-800 dark:text-white"></textarea>
-            <button onclick="savePrompt()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold">Uložit prompt</button>
+            <textarea id="promptText" placeholder="Zde vlož text promptu..." class="w-full p-3 mb-4 border dark:border-gray-700 rounded-xl flex-1 resize-none dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+            <button onclick="savePrompt()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-transform">Uložit prompt</button>
         </div>
     </div>
 
-    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg opacity-0 pointer-events-none z-50">
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg opacity-0 pointer-events-none z-50 transition-all duration-300">
         Akce byla úspěšná!
     </div>
 
     <script>
-        // Stavové proměnné
         let prompts = JSON.parse(localStorage.getItem('vault_prompts')) || [];
-        let currentUser = localStorage.getItem('vault_user');
         let currentFilter = 'Vše';
 
-        // Inicializace
-        if (currentUser) {
-            document.getElementById('authView').classList.add('hidden');
-            document.getElementById('appView').classList.remove('hidden');
+        // Spuštění po načtení
+        window.onload = () => {
             checkTheme();
             renderPrompts();
-        }
+        };
 
-        // --- AUTENTIZACE (Simulace) ---
-        function login() {
-            const email = document.getElementById('emailInput').value;
-            if (email.includes('@')) {
-                localStorage.setItem('vault_user', email);
-                location.reload();
-            } else {
-                showToast('Zadejte platný e-mail!');
-            }
-        }
-        function logout() { localStorage.removeItem('vault_user'); location.reload(); }
-
-        // --- UI FUNKCE ---
+        // --- UI LOGIKA ---
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
@@ -165,12 +135,10 @@
                 btn.classList.remove('text-blue-600');
                 btn.classList.add('text-gray-400', 'dark:text-gray-500');
             });
-            document.getElementById(`nav-${tabId}`).classList.remove('text-gray-400', 'dark:text-gray-500');
-            document.getElementById(`nav-${tabId}`).classList.add('text-blue-600');
+            document.getElementById(`nav-${tabId}`).classList.replace('text-gray-400', 'text-blue-600');
+            document.getElementById(`nav-${tabId}`).classList.replace('dark:text-gray-500', 'text-blue-600');
 
-            if(tabId === 'home') document.getElementById('searchContainer').style.display = 'block';
-            else document.getElementById('searchContainer').style.display = 'none';
-
+            document.getElementById('searchContainer').style.display = (tabId === 'home') ? 'block' : 'none';
             if(tabId === 'settings') updateStats();
         }
 
@@ -196,17 +164,16 @@
             setTimeout(() => toast.style.opacity = '0', 2500);
         }
 
-        // --- PROMPTY: CRUD OPERACE ---
+        // --- CRUD LOGIKA ---
         function setFilter(tag) {
             currentFilter = tag;
-            // Změna barvy aktivního tagu
             document.querySelectorAll('.filter-tag').forEach(el => {
-                el.classList.replace('bg-blue-600', 'bg-gray-200');
-                el.classList.replace('text-white', 'text-gray-800');
-                el.classList.add('dark:bg-gray-800');
+                el.classList.remove('bg-blue-600', 'text-white');
+                el.classList.add('bg-gray-200', 'dark:bg-gray-800');
                 if(el.innerText === tag) {
-                    el.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'text-gray-800');
-                    el.classList.add('bg-blue-600', 'text-white');
+                    el.classList.replace('bg-gray-200', 'bg-blue-600');
+                    el.classList.replace('dark:bg-gray-800', 'bg-blue-600');
+                    el.classList.add('text-white');
                 }
             });
             renderPrompts();
@@ -219,40 +186,43 @@
             
             list.innerHTML = ''; favList.innerHTML = '';
             
-            let filtered = prompts.filter(p => 
+            const filtered = prompts.filter(p => 
                 (currentFilter === 'Vše' || p.tag === currentFilter) &&
                 (p.title.toLowerCase().includes(searchQ) || p.text.toLowerCase().includes(searchQ))
             );
 
-            if(filtered.length === 0) list.innerHTML = '<p class="text-center text-gray-400 mt-10">Žádné prompty nenalezeny.</p>';
+            if(filtered.length === 0) list.innerHTML = '<div class="text-center py-20 text-gray-400">Tady zatím nic není...</div>';
 
             filtered.forEach(p => {
                 const card = createCard(p);
                 list.appendChild(card);
-                if(p.isFavorite) favList.appendChild(card.cloneNode(true)); // Klone pro oblíbené
+                if(p.isFavorite) {
+                    const favCard = createCard(p);
+                    favList.appendChild(favCard);
+                }
             });
             updateStats();
         }
 
         function createCard(p) {
             const div = document.createElement('div');
-            div.className = 'bg-white dark:bg-darkcard p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 relative';
+            div.className = 'bg-white dark:bg-darkcard p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-all active:scale-[0.98]';
             div.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <span class="text-[10px] font-bold uppercase tracking-wider text-blue-500 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-md">${p.tag}</span>
-                        <h4 class="font-bold text-lg mt-1">${p.title}</h4>
+                        <h4 class="font-bold text-lg mt-1 break-words">${p.title}</h4>
                     </div>
-                    <button onclick="toggleFav(${p.id})" class="text-xl ${p.isFavorite ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'} hover:scale-110 transition"><i class="fa-solid fa-star"></i></button>
+                    <button onclick="toggleFav(${p.id})" class="p-2 ${p.isFavorite ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'} transition-transform active:scale-125"><i class="fa-solid fa-star text-xl"></i></button>
                 </div>
-                <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">${p.text}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-4 whitespace-pre-wrap">${p.text}</p>
                 <div class="flex justify-between items-center border-t dark:border-gray-800 pt-3">
-                    <span class="text-xs text-gray-400"><i class="fa-solid fa-clock-rotate-left"></i> ${p.uses || 0}x</span>
-                    <div class="flex gap-2">
-                        <button onclick="deletePrompt(${p.id})" class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
-                        <button onclick="editPrompt(${p.id})" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
-                        <button onclick="sharePrompt(${p.id})" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center"><i class="fa-solid fa-share-nodes text-xs"></i></button>
-                        <button onclick="copyPrompt(${p.id})" class="px-4 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-bold hover:bg-blue-200 transition">Kopírovat</button>
+                    <span class="text-xs text-gray-400"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${p.uses || 0}x</span>
+                    <div class="flex gap-1">
+                        <button onclick="deletePrompt(${p.id})" class="w-9 h-9 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 transition"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                        <button onclick="editPrompt(${p.id})" class="w-9 h-9 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition"><i class="fa-solid fa-pen text-sm"></i></button>
+                        <button onclick="sharePrompt(${p.id})" class="w-9 h-9 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition"><i class="fa-solid fa-share-nodes text-sm"></i></button>
+                        <button onclick="copyPrompt(${p.id})" class="ml-1 px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md active:scale-90 transition">Kopírovat</button>
                     </div>
                 </div>
             `;
@@ -275,13 +245,13 @@
             const text = document.getElementById('promptText').value;
             const tag = document.getElementById('promptTag').value;
 
-            if(!title || !text) return showToast('Vyplňte název i text!');
+            if(!title || !text) return showToast('Vyplňte prosím vše!');
 
             if(id) {
                 const index = prompts.findIndex(p => p.id == id);
                 prompts[index] = { ...prompts[index], title, text, tag };
             } else {
-                prompts.push({ id: Date.now(), title, text, tag, isFavorite: false, uses: 0 });
+                prompts.unshift({ id: Date.now(), title, text, tag, isFavorite: false, uses: 0 });
             }
 
             localStorage.setItem('vault_prompts', JSON.stringify(prompts));
@@ -301,11 +271,11 @@
         }
 
         function deletePrompt(id) {
-            if(confirm('Opravdu chceš tento prompt smazat?')) {
+            if(confirm('Opravdu smazat?')) {
                 prompts = prompts.filter(p => p.id !== id);
                 localStorage.setItem('vault_prompts', JSON.stringify(prompts));
                 renderPrompts();
-                showToast('Smazáno!');
+                showToast('Prompt smazán');
             }
         }
 
@@ -319,7 +289,7 @@
         function copyPrompt(id) {
             const p = prompts.find(x => x.id === id);
             navigator.clipboard.writeText(p.text).then(() => {
-                p.uses = (p.uses || 0) + 1; // Zvýšení statistiky použití
+                p.uses = (p.uses || 0) + 1;
                 localStorage.setItem('vault_prompts', JSON.stringify(prompts));
                 renderPrompts();
                 showToast('Zkopírováno do schránky!');
@@ -329,44 +299,42 @@
         function sharePrompt(id) {
             const p = prompts.find(x => x.id === id);
             if (navigator.share) {
-                navigator.share({ title: p.title, text: p.text })
-                .catch(console.error);
+                navigator.share({ title: p.title, text: p.text }).catch(() => {});
             } else {
-                showToast('Sdílení není na tomto zařízení podporováno.');
+                showToast('Sdílení není podporováno prohlížečem.');
             }
         }
 
-        // --- IMPORT/EXPORT & STATS ---
+        // --- SYSTÉMOVÉ FUNKCE ---
         function updateStats() {
             document.getElementById('statTotal').innerText = prompts.length;
             document.getElementById('statFav').innerText = prompts.filter(p => p.isFavorite).length;
         }
 
         function exportJSON() {
+            if(prompts.length === 0) return showToast('Nic k exportu!');
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(prompts));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "promptvault_backup.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-            showToast('Exportováno!');
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `prompty_${new Date().toLocaleDateString()}.json`);
+            dlAnchor.click();
+            showToast('Záloha stažena!');
         }
 
         function importJSON(event) {
             const file = event.target.files[0];
             if(!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = (e) => {
                 try {
                     const imported = JSON.parse(e.target.result);
                     if(Array.isArray(imported)) {
                         prompts = imported;
                         localStorage.setItem('vault_prompts', JSON.stringify(prompts));
                         renderPrompts();
-                        showToast('Prompty úspěšně importovány!');
+                        showToast('Import úspěšný!');
                     }
-                } catch(err) { showToast('Chyba formátu souboru!'); }
+                } catch(err) { showToast('Neplatný soubor!'); }
             };
             reader.readAsText(file);
         }
