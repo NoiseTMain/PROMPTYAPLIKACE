@@ -1,343 +1,1646 @@
 <!DOCTYPE html>
-<html lang="cs" class="light">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PromptVault</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script>
-        // Konfigurace Tailwindu pro dark mode
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#121212', darkcard: '#1e1e1e' } } }
-        }
-    </script>
-    <style>
-        /* Skrytí scrollbaru pro čistší mobilní vzhled */
-        ::-webkit-scrollbar { display: none; }
-        body { -ms-overflow-style: none; scrollbar-width: none; transition: background-color 0.3s, color 0.3s; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .toast { transition: opacity 0.3s ease-in-out; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bid Master — Auction Tycoon</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     ============================================================ */
+  :root{
+    --bg-void:#0a0c11;
+    --bg-panel:#161a23;
+    --bg-panel-2:#1d2230;
+    --felt:#132922;
+    --felt-2:#0e1f19;
+    --gold:#d4af37;
+    --gold-light:#f2df9a;
+    --gold-dim:#8a742a;
+    --cream:#ece7d5;
+    --muted:#8b91a3;
+    --danger:#c0392b;
+    --danger-light:#e6675a;
+    --success:#3fb87f;
+    --info:#4f8fdb;
+    --radius-lg:16px;
+    --radius-md:10px;
+    --radius-sm:6px;
+    --shadow-soft:0 8px 24px rgba(0,0,0,0.45);
+    --shadow-deep:0 16px 40px rgba(0,0,0,0.55);
+    --font-display:'Palatino Linotype','Book Antiqua',Georgia,'Times New Roman',serif;
+    --font-body:'Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:radial-gradient(ellipse at top,#151a24 0%, var(--bg-void) 65%);
+    color:var(--cream);
+    font-family:var(--font-body);
+    overflow:hidden;
+    user-select:none;
+  }
+  #app{position:relative; width:100vw; height:100vh; overflow:hidden;}
+  #fx-canvas{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:500;}
+
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--gold-dim); border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  /* ============================================================
+     SCREENS
+     ============================================================ */
+  .screen{
+    position:absolute; inset:0; display:none;
+    flex-direction:column; align-items:center;
+    overflow-y:auto; overflow-x:hidden;
+    padding:20px;
+    animation:fadeIn .35s ease;
+  }
+  .screen.active{display:flex;}
+
+  @keyframes fadeIn{from{opacity:0; transform:scale(.985);} to{opacity:1; transform:scale(1);}}
+  @keyframes slideUp{from{opacity:0; transform:translateY(24px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes pulseGold{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,.5);} 50%{box-shadow:0 0 0 10px rgba(212,175,55,0);}}
+  @keyframes shakeIt{0%,100%{transform:translateX(0);} 20%{transform:translateX(-6px);} 40%{transform:translateX(6px);} 60%{transform:translateX(-4px);} 80%{transform:translateX(4px);}}
+  @keyframes popIn{0%{transform:scale(.7); opacity:0;} 70%{transform:scale(1.05); opacity:1;} 100%{transform:scale(1);}}
+  @keyframes floatUp{from{transform:translateY(0); opacity:1;} to{transform:translateY(-60px); opacity:0;}}
+  @keyframes shimmer{0%{background-position:-200% 0;} 100%{background-position:200% 0;}}
+  @keyframes thinkDots{0%,100%{opacity:.2;}50%{opacity:1;}}
+  @keyframes glowText{0%,100%{text-shadow:0 0 8px rgba(212,175,55,.4);}50%{text-shadow:0 0 18px rgba(212,175,55,.85);}}
+
+  h1,h2,h3{font-family:var(--font-display); margin:0;}
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .btn{
+    font-family:var(--font-body); font-weight:600; font-size:15px;
+    padding:14px 22px; border-radius:var(--radius-md); border:none; cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    letter-spacing:.3px;
+  }
+  .btn:active{transform:scale(.96);}
+  .btn:hover{filter:brightness(1.08);}
+  .btn-gold{
+    background:linear-gradient(135deg,#f2df9a,#d4af37 45%,#a9812a);
+    color:#241d05; box-shadow:var(--shadow-soft), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .btn-gold:hover{box-shadow:0 10px 28px rgba(212,175,55,.35), inset 0 1px 0 rgba(255,255,255,.5);}
+  .btn-outline{
+    background:linear-gradient(180deg,#232838,#171b24);
+    color:var(--cream); border:1px solid #333a4d; box-shadow:var(--shadow-soft);
+  }
+  .btn-outline:hover{border-color:var(--gold-dim); color:var(--gold-light);}
+  .btn-danger{background:linear-gradient(135deg,var(--danger-light),var(--danger)); color:#fff; box-shadow:var(--shadow-soft);}
+  .btn-success{background:linear-gradient(135deg,#6fe3ab,var(--success)); color:#06301c; box-shadow:var(--shadow-soft);}
+  .btn:disabled{opacity:.4; cursor:not-allowed; filter:none; transform:none;}
+  .icon-btn{
+    width:44px; height:44px; border-radius:50%; border:1px solid #333a4d;
+    background:linear-gradient(180deg,#232838,#171b24); color:var(--cream);
+    font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:var(--shadow-soft); transition:transform .15s, border-color .15s;
+  }
+  .icon-btn:hover{border-color:var(--gold-dim); transform:translateY(-2px);}
+  .icon-btn:active{transform:scale(.92);}
+
+  /* ============================================================
+     MAIN MENU
+     ============================================================ */
+  #screen-menu{justify-content:center;}
+  .menu-wrap{
+    display:flex; flex-direction:column; align-items:center; gap:18px;
+    max-width:420px; width:100%; text-align:center;
+    animation:slideUp .5s ease;
+  }
+  .game-title{
+    font-size:52px; letter-spacing:2px; color:var(--gold-light);
+    animation:glowText 3s ease-in-out infinite;
+  }
+  .game-title span{color:var(--cream);}
+  .tagline{color:var(--muted); font-size:14px; margin-top:-10px; letter-spacing:.5px;}
+  .menu-buttons{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:10px;}
+  .menu-footer{
+    margin-top:14px; font-size:13px; color:var(--muted);
+    background:var(--bg-panel); padding:10px 18px; border-radius:20px; border:1px solid #262b39;
+  }
+  .menu-footer span{color:var(--gold-light); font-weight:700;}
+
+  /* ============================================================
+     TOPBAR (Game Screen)
+     ============================================================ */
+  .game-topbar{
+    width:100%; max-width:1100px; display:flex; justify-content:space-between; align-items:center;
+    padding:10px 4px; gap:10px; flex-wrap:wrap;
+  }
+  .topbar-left, .topbar-right{display:flex; align-items:center; gap:10px;}
+  .stat-chip{
+    background:var(--bg-panel); border:1px solid #262b39; padding:8px 14px; border-radius:20px;
+    font-size:13px; color:var(--muted);
+  }
+  .stat-chip span{color:var(--cream); font-weight:700;}
+  .money-chip{
+    background:linear-gradient(135deg,#2a2410,#1a1708); border:1px solid var(--gold-dim);
+    padding:9px 18px; border-radius:20px; font-weight:700; color:var(--gold-light); font-size:16px;
+    box-shadow:inset 0 0 12px rgba(212,175,55,.08);
+  }
+
+  /* ============================================================
+     AUCTION FLOOR
+     ============================================================ */
+  .auction-floor{
+    width:100%; max-width:1100px; display:grid; grid-template-columns:1fr 300px; gap:18px;
+    margin-top:6px; align-items:start;
+  }
+  @media(max-width:860px){ .auction-floor{grid-template-columns:1fr;} }
+
+  .item-panel{
+    background:linear-gradient(180deg, var(--felt), var(--felt-2));
+    border-radius:var(--radius-lg); padding:22px; box-shadow:var(--shadow-deep);
+    border:1px solid #1f3a30; position:relative; overflow:hidden;
+  }
+  .item-panel::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.06;
+    background:repeating-linear-gradient(45deg,#fff 0 2px, transparent 2px 40px);
+  }
+  .item-card{text-align:center; padding-bottom:16px; border-bottom:1px dashed rgba(212,175,55,.25); margin-bottom:16px;}
+  .item-icon{font-size:64px; animation:popIn .4s ease;}
+  .item-name{font-family:var(--font-display); font-size:26px; color:var(--gold-light); margin-top:6px;}
+  .item-category{color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:1.5px; margin-top:2px;}
+  .item-estimate{margin-top:10px; font-size:14px; color:var(--cream); background:rgba(0,0,0,.25); display:inline-block; padding:6px 14px; border-radius:20px;}
+
+  .bid-status{text-align:center; margin-bottom:18px;}
+  .current-bid-label{font-size:12px; letter-spacing:2px; color:var(--muted); text-transform:uppercase;}
+  .current-bid-amount{font-family:var(--font-display); font-size:44px; color:var(--gold-light); line-height:1.1;}
+  .current-bidder{font-size:14px; color:var(--cream); min-height:20px;}
+  .current-bidder.you{color:var(--success); font-weight:700;}
+  .current-bidder.ai{color:var(--danger-light); font-weight:700;}
+  .timer-bar-wrap{
+    width:100%; height:10px; background:rgba(0,0,0,.4); border-radius:6px; overflow:hidden; margin-top:10px;
+    border:1px solid rgba(212,175,55,.2);
+  }
+  .timer-bar{height:100%; width:100%; background:linear-gradient(90deg,var(--success),var(--gold)); transition:width .12s linear, background .3s;}
+  .timer-bar.warn{background:linear-gradient(90deg,var(--gold),var(--danger));}
+
+  .bid-controls{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;}
+  .bid-btn{
+    padding:14px 4px; border-radius:var(--radius-md); border:1px solid var(--gold-dim); cursor:pointer;
+    background:linear-gradient(180deg,#2c3348,#1b2030); color:var(--gold-light); font-weight:700; font-size:15px;
+    transition:transform .12s, box-shadow .12s, filter .12s;
+  }
+  .bid-btn:hover:not(:disabled){transform:translateY(-3px); box-shadow:0 6px 16px rgba(212,175,55,.25);}
+  .bid-btn:active:not(:disabled){transform:scale(.94);}
+  .bid-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .pass-btn{background:linear-gradient(180deg,#3a2020,#2a1414); color:var(--danger-light); border-color:#5c2b2b;}
+
+  .auction-log{
+    max-height:120px; overflow-y:auto; font-size:12.5px; color:var(--muted);
+    background:rgba(0,0,0,.28); border-radius:var(--radius-sm); padding:10px 12px; display:flex; flex-direction:column; gap:4px;
+  }
+  .auction-log div{animation:slideUp .25s ease;}
+  .auction-log .me{color:var(--success);}
+  .auction-log .foe{color:var(--danger-light);}
+  .auction-log .sys{color:var(--gold-light);}
+
+  .ai-panel{display:flex; flex-direction:row; gap:10px; overflow-x:auto; padding-bottom:4px;}
+  @media(min-width:861px){ .ai-panel{flex-direction:column; overflow-x:visible;} }
+  .ai-card{
+    background:var(--bg-panel); border:1px solid #262b39; border-radius:var(--radius-md);
+    padding:12px; min-width:150px; flex:0 0 auto; transition:border-color .2s, box-shadow .2s;
+    position:relative;
+  }
+  @media(min-width:861px){ .ai-card{min-width:auto;} }
+  .ai-card.leading{border-color:var(--danger-light); box-shadow:0 0 0 2px rgba(230,103,90,.25);}
+  .ai-card.out{opacity:.4; filter:grayscale(.6);}
+  .ai-head{display:flex; align-items:center; gap:8px;}
+  .ai-avatar{font-size:26px;}
+  .ai-name{font-size:13.5px; font-weight:700; color:var(--cream);}
+  .ai-type{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
+  .ai-budget-wrap{margin-top:8px; height:6px; background:rgba(0,0,0,.4); border-radius:4px; overflow:hidden;}
+  .ai-budget-bar{height:100%; background:linear-gradient(90deg,var(--info),#7ec1ff);}
+  .ai-status{margin-top:6px; font-size:11.5px; color:var(--muted); min-height:14px;}
+  .ai-thinking span{animation:thinkDots 1s infinite; }
+  .ai-thinking span:nth-child(2){animation-delay:.15s;}
+  .ai-thinking span:nth-child(3){animation-delay:.3s;}
+
+  /* ============================================================
+     GENERIC SUBPAGE (Shop / Achievements / Stats / Settings)
+     ============================================================ */
+  .subpage{width:100%; max-width:900px; animation:slideUp .4s ease; padding-bottom:40px;}
+  .subpage-header{display:flex; align-items:center; gap:14px; margin-bottom:18px; position:sticky; top:0; padding:6px 0; z-index:5;}
+  .subpage-title{font-size:26px; color:var(--gold-light); flex:1;}
+
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px;}
+  .panel-card{
+    background:var(--bg-panel); border:1px solid #262b39; border-radius:var(--radius-md); padding:16px;
+    box-shadow:var(--shadow-soft); transition:transform .15s, border-color .15s;
+  }
+  .panel-card:hover{border-color:var(--gold-dim); transform:translateY(-2px);}
+  .upgrade-icon{font-size:30px;}
+  .upgrade-name{font-size:16px; font-weight:700; color:var(--cream); margin-top:6px;}
+  .upgrade-desc{font-size:12.5px; color:var(--muted); margin-top:4px; min-height:32px;}
+  .upgrade-level{font-size:12px; color:var(--gold-light); margin-top:8px;}
+  .level-dots{display:flex; gap:4px; margin-top:6px;}
+  .level-dot{width:14px; height:6px; border-radius:3px; background:#2c3140;}
+  .level-dot.filled{background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+  .upgrade-buy{width:100%; margin-top:12px; padding:10px; font-size:13.5px;}
+
+  .inv-item{display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--bg-panel-2); border-radius:var(--radius-sm); margin-bottom:8px;}
+  .inv-item .inv-info{display:flex; align-items:center; gap:10px;}
+  .inv-sell-btn{padding:8px 14px; font-size:12.5px;}
+
+  .ach-card{opacity:.45; filter:grayscale(.7);}
+  .ach-card.unlocked{opacity:1; filter:none; border-color:var(--gold-dim);}
+  .ach-progress{font-size:11px; color:var(--muted); margin-top:6px;}
+
+  .stat-row{display:flex; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #232838; font-size:14px;}
+  .stat-row span:last-child{color:var(--gold-light); font-weight:700;}
+
+  .settings-row{display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:var(--bg-panel); border-radius:var(--radius-md); margin-bottom:12px; gap:14px; flex-wrap:wrap;}
+  .settings-row label{font-size:14px;}
+  input[type="range"]{width:160px; accent-color:var(--gold);}
+  .toggle{
+    width:48px; height:26px; border-radius:14px; background:#2c3140; position:relative; cursor:pointer; border:1px solid #3a4155; flex:0 0 auto;
+  }
+  .toggle.on{background:linear-gradient(135deg,var(--gold),var(--gold-dim));}
+  .toggle::after{
+    content:''; position:absolute; width:20px; height:20px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .2s;
+  }
+  .toggle.on::after{left:24px;}
+
+  /* ============================================================
+     OVERLAYS
+     ============================================================ */
+  .overlay{
+    position:fixed; inset:0; background:rgba(4,5,8,.72); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center; z-index:600; padding:18px;
+    transition:opacity .25s ease;
+  }
+  .overlay.hidden{display:none;}
+  .overlay-box{
+    background:linear-gradient(180deg,#1b2030,#12151d); border:1px solid var(--gold-dim);
+    border-radius:var(--radius-lg); padding:28px; max-width:420px; width:100%; text-align:center;
+    box-shadow:var(--shadow-deep); animation:popIn .3s ease;
+  }
+  .overlay-box h2{color:var(--gold-light); font-size:24px; margin-bottom:10px;}
+  .overlay-box p{color:var(--cream); font-size:14.5px; line-height:1.5; margin:8px 0;}
+  .overlay-buttons{display:flex; flex-direction:column; gap:10px; margin-top:18px;}
+  .overlay-buttons.row{flex-direction:row;}
+  .result-amount{font-family:var(--font-display); font-size:38px; color:var(--gold-light); margin:10px 0;}
+  .result-profit{font-size:16px; font-weight:700;}
+  .result-profit.pos{color:var(--success);}
+  .result-profit.neg{color:var(--danger-light);}
+
+  /* Toasts */
+  #toast-container{position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:700; display:flex; flex-direction:column; gap:8px; align-items:center;}
+  .toast{
+    background:linear-gradient(135deg,#2a2410,#1a1708); border:1px solid var(--gold); color:var(--gold-light);
+    padding:12px 22px; border-radius:24px; font-size:13.5px; font-weight:600; box-shadow:var(--shadow-deep);
+    animation:slideUp .3s ease, fadeOutToast .3s ease 2.7s forwards; display:flex; align-items:center; gap:8px;
+  }
+  @keyframes fadeOutToast{to{opacity:0; transform:translateY(-10px);}}
+
+  /* Game Over / Victory */
+  .end-icon{font-size:70px; animation:popIn .5s ease;}
+  #screen-gameover .game-title, #screen-victory .game-title{font-size:36px;}
+
+  .shake{animation:shakeIt .4s ease;}
+  .hidden{display:none !important;}
+
+  @media(max-width:600px){
+    .bid-controls{grid-template-columns:repeat(2,1fr);}
+    .current-bid-amount{font-size:34px;}
+    .game-title{font-size:38px;}
+    .subpage-title{font-size:20px;}
+  }
+</style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-darkbg dark:text-gray-200 min-h-screen pb-20">
+<body>
+<div id="app">
+  <canvas id="fx-canvas"></canvas>
 
-    <div id="appView">
-        
-        <header class="sticky top-0 bg-white/80 dark:bg-darkbg/80 backdrop-blur-md z-40 p-4 flex justify-between items-center shadow-sm">
-            <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-vault text-blue-500"></i> PromptVault</h2>
-            <button onclick="toggleTheme()" class="text-xl p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition">
-                <i id="themeIcon" class="fa-solid fa-moon"></i>
-            </button>
-        </header>
+  <!-- ============ MAIN MENU ============ -->
+  <section id="screen-menu" class="screen active">
+    <div class="menu-wrap">
+      <h1 class="game-title">BID<span>MASTER</span></h1>
+      <p class="tagline">Outbid. Outsmart. Own the auction house.</p>
+      <div class="menu-buttons">
+        <button class="btn btn-gold" id="btn-new-game">New Auction Run</button>
+        <button class="btn btn-outline" id="btn-continue">Continue</button>
+        <button class="btn btn-outline" id="btn-shop">Shop &amp; Upgrades</button>
+        <button class="btn btn-outline" id="btn-achievements">Achievements</button>
+        <button class="btn btn-outline" id="btn-stats">Statistics</button>
+        <button class="btn btn-outline" id="btn-settings">Settings</button>
+      </div>
+      <div class="menu-footer">Bankroll: <span id="menu-money">$0</span> &nbsp;·&nbsp; Round <span id="menu-round">1</span></div>
+    </div>
+  </section>
 
-        <div class="p-4" id="searchContainer">
-            <div class="relative">
-                <i class="fa-solid fa-search absolute left-4 top-3.5 text-gray-400"></i>
-                <input type="text" id="searchInput" onkeyup="renderPrompts()" placeholder="Hledat prompty..." class="w-full pl-10 p-3 rounded-xl bg-white dark:bg-darkcard shadow-sm border-none focus:ring-2 focus:ring-blue-500 dark:text-white">
-            </div>
-            <div class="flex gap-2 mt-4 overflow-x-auto pb-2" id="filterTags">
-                <span onclick="setFilter('Vše')" class="filter-tag cursor-pointer px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm whitespace-nowrap transition-colors">Vše</span>
-                <span onclick="setFilter('Práce')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap transition-colors">Práce</span>
-                <span onclick="setFilter('Kódování')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap transition-colors">Kódování</span>
-                <span onclick="setFilter('Zábava')" class="filter-tag cursor-pointer px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-full text-sm whitespace-nowrap transition-colors">Zábava</span>
-            </div>
+  <!-- ============ GAME SCREEN ============ -->
+  <section id="screen-game" class="screen">
+    <header class="game-topbar">
+      <div class="topbar-left">
+        <button class="icon-btn" id="btn-pause" title="Pause">⏸</button>
+        <div class="stat-chip">Round <span id="hud-round">1</span></div>
+        <div class="stat-chip">Lot <span id="hud-item">1</span>/<span id="hud-item-total">5</span></div>
+      </div>
+      <div class="topbar-right">
+        <div class="money-chip">💰 <span id="hud-money">$1,000</span></div>
+      </div>
+    </header>
+
+    <div class="auction-floor">
+      <div class="item-panel">
+        <div class="item-card">
+          <div class="item-icon" id="item-icon">🏺</div>
+          <div class="item-name" id="item-name">Antique Vase</div>
+          <div class="item-category" id="item-category">Antiques</div>
+          <div class="item-estimate">Est. Value: <span id="item-estimate">$400 – $700</span></div>
         </div>
 
-        <main class="px-4">
-            <div id="tab-home" class="tab-content active space-y-4 pb-10">
-                <div id="promptsList"></div>
-            </div>
+        <div class="bid-status">
+          <div class="current-bid-label">Current Bid</div>
+          <div class="current-bid-amount" id="current-bid">$0</div>
+          <div class="current-bidder" id="current-bidder">No bids yet — be the first!</div>
+          <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+        </div>
 
-            <div id="tab-favorites" class="tab-content space-y-4 pb-10">
-                <h3 class="text-lg font-bold mb-4">Oblíbené prompty</h3>
-                <div id="favoritesList"></div>
-            </div>
+        <div class="bid-controls">
+          <button class="bid-btn" id="btn-bid-small" data-tier="small">+$10</button>
+          <button class="bid-btn" id="btn-bid-med" data-tier="med">+$50</button>
+          <button class="bid-btn" id="btn-bid-large" data-tier="large">+$100</button>
+          <button class="bid-btn pass-btn" id="btn-pass">Pass</button>
+        </div>
 
-            <div id="tab-settings" class="tab-content pb-10">
-                <h3 class="text-lg font-bold mb-4">Statistiky a Nastavení</h3>
-                <div class="bg-white dark:bg-darkcard p-4 rounded-2xl shadow-sm mb-4">
-                    <p>Celkem promptů: <span id="statTotal" class="font-bold text-blue-500">0</span></p>
-                    <p>Oblíbených: <span id="statFav" class="font-bold text-yellow-500">0</span></p>
-                </div>
-                <div class="space-y-3">
-                    <button onclick="exportJSON()" class="w-full bg-green-500 text-white p-3 rounded-xl font-bold shadow-md hover:bg-green-600 transition"><i class="fa-solid fa-download mr-2"></i> Exportovat prompty (JSON)</button>
-                    <label class="w-full flex justify-center items-center bg-purple-500 text-white p-3 rounded-xl font-bold shadow-md cursor-pointer hover:bg-purple-600 transition">
-                        <i class="fa-solid fa-upload mr-2"></i> Importovat prompty
-                        <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" class="hidden">
-                    </label>
-                </div>
-            </div>
-        </main>
+        <div class="auction-log" id="auction-log"></div>
+      </div>
 
-        <button onclick="openModal()" class="fixed bottom-24 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg text-2xl flex justify-center items-center hover:bg-blue-700 transition z-40 transform hover:scale-105 active:scale-95">
-            <i class="fa-solid fa-plus"></i>
+      <aside class="ai-panel" id="ai-panel"></aside>
+    </div>
+  </section>
+
+  <!-- ============ SHOP ============ -->
+  <section id="screen-shop" class="screen">
+    <div class="subpage">
+      <div class="subpage-header">
+        <button class="icon-btn" data-back>←</button>
+        <h2 class="subpage-title">Shop &amp; Upgrades</h2>
+        <div class="money-chip">💰 <span id="shop-money">$0</span></div>
+      </div>
+      <h3 style="color:var(--gold-light); margin:10px 0;">Upgrades</h3>
+      <div class="card-grid" id="upgrade-grid"></div>
+      <h3 style="color:var(--gold-light); margin:22px 0 10px;">Your Inventory</h3>
+      <div id="inventory-list"><p style="color:var(--muted); font-size:13.5px;">No unsold items — win auctions to fill your vault.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ ACHIEVEMENTS ============ -->
+  <section id="screen-achievements" class="screen">
+    <div class="subpage">
+      <div class="subpage-header">
+        <button class="icon-btn" data-back>←</button>
+        <h2 class="subpage-title">Achievements</h2>
+      </div>
+      <div class="card-grid" id="achievement-grid"></div>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section id="screen-stats" class="screen">
+    <div class="subpage">
+      <div class="subpage-header">
+        <button class="icon-btn" data-back>←</button>
+        <h2 class="subpage-title">Statistics</h2>
+      </div>
+      <div id="stats-list" style="background:var(--bg-panel); border-radius:var(--radius-md); overflow:hidden; border:1px solid #262b39;"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="screen-settings" class="screen">
+    <div class="subpage">
+      <div class="subpage-header">
+        <button class="icon-btn" data-back>←</button>
+        <h2 class="subpage-title">Settings</h2>
+      </div>
+      <div class="settings-row">
+        <label>Sound Effects Volume</label>
+        <input type="range" id="range-volume" min="0" max="100" value="60">
+      </div>
+      <div class="settings-row">
+        <label>Particle Animations</label>
+        <div class="toggle on" id="toggle-animations"></div>
+      </div>
+      <div class="settings-row">
+        <label>Mute All Sound</label>
+        <div class="toggle" id="toggle-mute"></div>
+      </div>
+      <div class="settings-row">
+        <label style="color:var(--danger-light);">Reset All Progress</label>
+        <button class="btn btn-danger" id="btn-reset-save">Reset Save</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GAME OVER ============ -->
+  <section id="screen-gameover" class="screen">
+    <div class="menu-wrap">
+      <div class="end-icon">💸</div>
+      <h1 class="game-title" style="color:var(--danger-light);">BANKRUPT</h1>
+      <p class="tagline" id="gameover-text">You ran out of money and inventory to sell.</p>
+      <div class="menu-footer">Rounds Survived: <span id="gameover-round">1</span> &nbsp;·&nbsp; Auctions Won: <span id="gameover-won">0</span></div>
+      <div class="menu-buttons" style="margin-top:16px;">
+        <button class="btn btn-gold" id="btn-try-again">Try Again</button>
+        <button class="btn btn-outline" id="btn-gameover-menu">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VICTORY ============ -->
+  <section id="screen-victory" class="screen">
+    <div class="menu-wrap">
+      <div class="end-icon">🏆</div>
+      <h1 class="game-title">AUCTION MOGUL</h1>
+      <p class="tagline">You built a $100,000 fortune at the gavel!</p>
+      <div class="menu-footer">Final Bankroll: <span id="victory-money">$0</span></div>
+      <div class="menu-buttons" style="margin-top:16px;">
+        <button class="btn btn-gold" id="btn-victory-continue">Keep Playing</button>
+        <button class="btn btn-outline" id="btn-victory-menu">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERLAY: PAUSE ============ -->
+  <div class="overlay hidden" id="overlay-pause">
+    <div class="overlay-box">
+      <h2>Paused</h2>
+      <p>Take a breath. The gavel can wait.</p>
+      <div class="overlay-buttons">
+        <button class="btn btn-gold" id="btn-resume">Resume Auction</button>
+        <button class="btn btn-outline" id="btn-pause-shop">Shop &amp; Upgrades</button>
+        <button class="btn btn-outline" id="btn-pause-settings">Settings</button>
+        <button class="btn btn-danger" id="btn-pause-quit">Quit to Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OVERLAY: AUCTION RESULT ============ -->
+  <div class="overlay hidden" id="overlay-result">
+    <div class="overlay-box">
+      <h2 id="result-title">Sold!</h2>
+      <div class="item-icon" id="result-icon" style="font-size:48px;">🏺</div>
+      <p id="result-desc">You won the Antique Vase.</p>
+      <div class="result-amount" id="result-amount">$500</div>
+      <div id="result-sell-choice" class="overlay-buttons">
+        <button class="btn btn-success" id="btn-sell-now">Sell Now</button>
+        <button class="btn btn-outline" id="btn-keep-item">Keep for Later</button>
+      </div>
+      <div id="result-continue-choice" class="overlay-buttons hidden">
+        <button class="btn btn-gold" id="btn-result-continue">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OVERLAY: ROUND SUMMARY ============ -->
+  <div class="overlay hidden" id="overlay-round">
+    <div class="overlay-box">
+      <h2>Round Complete!</h2>
+      <p id="round-summary-text">You completed round 1.</p>
+      <div class="result-amount" id="round-bonus">+$0</div>
+      <p style="color:var(--muted); font-size:13px;">Difficulty rises ahead — bigger lots, richer rivals.</p>
+      <div class="overlay-buttons">
+        <button class="btn btn-gold" id="btn-round-continue">Next Round</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OVERLAY: CONFIRM ============ -->
+  <div class="overlay hidden" id="overlay-confirm">
+    <div class="overlay-box">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-text">This action cannot be undone.</p>
+      <div class="overlay-buttons row">
+        <button class="btn btn-outline" id="btn-confirm-no">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================================================================
+   UTILITIES
+   ================================================================ */
+const Util = {
+  rand(min,max){ return Math.random()*(max-min)+min; },
+  randInt(min,max){ return Math.floor(Util.rand(min,max+1)); },
+  choice(arr){ return arr[Math.floor(Math.random()*arr.length)]; },
+  clamp(v,a,b){ return Math.max(a, Math.min(b,v)); },
+  roundNice(v){
+    // Round to a "clean" money amount depending on magnitude
+    if(v < 100) return Math.round(v/5)*5;
+    if(v < 1000) return Math.round(v/10)*10;
+    if(v < 10000) return Math.round(v/50)*50;
+    return Math.round(v/100)*100;
+  },
+  money(v){
+    v = Math.round(v);
+    return '$' + v.toLocaleString('en-US');
+  },
+  uid(){ return 'id'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36); }
+};
+
+/* ================================================================
+   SOUND MANAGER — pure Web Audio API, no external assets
+   ================================================================ */
+class SoundManager{
+  constructor(){
+    this.ctx = null;
+    this.volume = 0.6;
+    this.muted = false;
+    this._unlocked = false;
+    const unlock = ()=>{
+      if(!this._unlocked){
+        this._unlocked = true;
+        this.ensureCtx();
+      }
+    };
+    document.addEventListener('click', unlock, {once:true});
+    document.addEventListener('touchstart', unlock, {once:true});
+  }
+  ensureCtx(){
+    if(!this.ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+    }
+    if(this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  }
+  _gainNow(){ return this.muted ? 0 : this.volume; }
+  tone(freq, duration, {type='sine', gainMul=1, delay=0, glideTo=null, attack=0.005}={}){
+    if(this.muted) return;
+    const ctx = this.ensureCtx();
+    const t0 = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if(glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(20,glideTo), t0+duration);
+    const peak = this._gainNow()*0.28*gainMul;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002,peak), t0+attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+duration);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0+duration+0.05);
+  }
+  playClick(){ this.tone(520, 0.06, {type:'square', gainMul:0.6}); }
+  playBid(){ this.tone(440, 0.12, {type:'triangle', glideTo:660, gainMul:1}); }
+  playAiBid(){ this.tone(300, 0.10, {type:'sawtooth', glideTo:260, gainMul:0.7}); }
+  playPass(){ this.tone(220, 0.15, {type:'sine', glideTo:140, gainMul:0.6}); }
+  playCoin(){
+    this.tone(880, 0.09, {type:'square', gainMul:0.5});
+    this.tone(1320,0.12,{type:'square', gainMul:0.4, delay:0.06});
+  }
+  playWin(){
+    [523,659,784,1046].forEach((f,i)=> this.tone(f,0.18,{type:'triangle',gainMul:0.8,delay:i*0.09}));
+  }
+  playLose(){
+    [392,330,262].forEach((f,i)=> this.tone(f,0.28,{type:'sawtooth',gainMul:0.7,delay:i*0.12}));
+  }
+  playTick(){ this.tone(1000,0.05,{type:'square',gainMul:0.35}); }
+  playError(){ this.tone(160,0.18,{type:'square',gainMul:0.5}); }
+  playAchievement(){
+    [660,880,1108,1320].forEach((f,i)=> this.tone(f,0.16,{type:'sine',gainMul:0.9,delay:i*0.07}));
+  }
+}
+const Sound = new SoundManager();
+
+/* ================================================================
+   PARTICLE SYSTEM — canvas-based confetti & coin bursts
+   ================================================================ */
+class ParticleSystem{
+  constructor(canvas){
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.particles = [];
+    this.enabled = true;
+    this._resize();
+    window.addEventListener('resize', ()=>this._resize());
+    this._loop();
+  }
+  _resize(){
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+  spawnConfetti(x,y,count=40){
+    if(!this.enabled) return;
+    const colors = ['#d4af37','#f2df9a','#3fb87f','#4f8fdb','#e6675a','#ece7d5'];
+    for(let i=0;i<count;i++){
+      this.particles.push({
+        x, y, vx:Util.rand(-4,4), vy:Util.rand(-8,-2),
+        life:1, decay:Util.rand(0.01,0.02), size:Util.rand(4,9),
+        color:Util.choice(colors), rot:Util.rand(0,360), vr:Util.rand(-8,8),
+        gravity:0.18, type:'confetti'
+      });
+    }
+  }
+  spawnCoins(x,y,count=14){
+    if(!this.enabled) return;
+    for(let i=0;i<count;i++){
+      this.particles.push({
+        x, y, vx:Util.rand(-2.5,2.5), vy:Util.rand(-7,-3),
+        life:1, decay:Util.rand(0.012,0.022), size:Util.rand(6,10),
+        color:'#f2df9a', rot:0, vr:0, gravity:0.25, type:'coin'
+      });
+    }
+  }
+  update(){
+    for(let i=this.particles.length-1;i>=0;i--){
+      const p = this.particles[i];
+      p.vy += p.gravity;
+      p.x += p.vx; p.y += p.vy;
+      p.rot += p.vr;
+      p.life -= p.decay;
+      if(p.life<=0) this.particles.splice(i,1);
+    }
+  }
+  render(){
+    const ctx = this.ctx;
+    ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+    for(const p of this.particles){
+      ctx.save();
+      ctx.globalAlpha = Util.clamp(p.life,0,1);
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot*Math.PI/180);
+      if(p.type==='coin'){
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#a9812a';
+        ctx.font = (p.size*0.9)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('$',0,1);
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+      }
+      ctx.restore();
+    }
+  }
+  _loop(){
+    this.update();
+    this.render();
+    requestAnimationFrame(()=>this._loop());
+  }
+}
+const FX = new ParticleSystem(document.getElementById('fx-canvas'));
+
+/* ================================================================
+   GAME DATA DEFINITIONS
+   ================================================================ */
+const ITEM_TYPES = [
+  {name:'Antique Vase', icon:'🏺', category:'Antiques', min:250, max:900},
+  {name:'Vintage Watch', icon:'⌚', category:'Timepieces', min:500, max:2200},
+  {name:'Oil Painting', icon:'🖼️', category:'Fine Art', min:800, max:3800},
+  {name:'Diamond Ring', icon:'💍', category:'Jewelry', min:1000, max:5200},
+  {name:'Classic Car', icon:'🚗', category:'Automobiles', min:4500, max:18000},
+  {name:'Rare Manuscript', icon:'📖', category:'Antiquities', min:200, max:1300},
+  {name:'Marble Sculpture', icon:'🗿', category:'Fine Art', min:600, max:2800},
+  {name:'Vintage Guitar', icon:'🎸', category:'Collectibles', min:300, max:1900},
+  {name:'Raw Gemstone', icon:'💎', category:'Jewelry', min:700, max:4400},
+  {name:'Crystal Chandelier', icon:'💡', category:'Décor', min:400, max:2200},
+  {name:'Samurai Sword', icon:'⚔️', category:'Antiquities', min:900, max:4000},
+  {name:'Ming Vase', icon:'🍶', category:'Antiques', min:1200, max:6000},
+];
+
+const AI_PROFILES = [
+  {id:'randy', name:'Reckless Randy', avatar:'🎩', type:'Aggressive',
+   noiseRange:[0.85,1.20], willRange:[1.05,1.35], bidProb:0.85, baseBudget:2200},
+  {id:'clara', name:'Cautious Clara', avatar:'🧣', type:'Conservative',
+   noiseRange:[0.9,1.05], willRange:[0.62,0.85], bidProb:0.5, baseBudget:1800},
+  {id:'sam',   name:'Sharp Sam', avatar:'🕶️', type:'Value Hunter',
+   noiseRange:[0.95,1.05], willRange:[0.9,1.05], bidProb:0.78, baseBudget:2600},
+  {id:'wendy', name:'Wild Wendy', avatar:'🃏', type:'Wildcard',
+   noiseRange:[0.7,1.35], willRange:[0.55,1.45], bidProb:0.55, baseBudget:2000},
+];
+
+const UPGRADE_DEFS = [
+  {id:'appraisal', name:'Appraiser\'s Loupe', icon:'🔍', maxLevel:5, baseCost:300, growth:1.65,
+   desc:'Narrows your estimated value range so you know an item\'s worth more precisely.'},
+  {id:'negotiator', name:'Silver Tongue', icon:'🗣️', maxLevel:5, baseCost:350, growth:1.7,
+   desc:'Chance to negotiate a discount on your final winning bid.'},
+  {id:'pockets', name:'Deep Pockets', icon:'💰', maxLevel:5, baseCost:400, growth:1.75,
+   desc:'Increases starting capital on new runs and grants a cash bonus each round.'},
+  {id:'luck', name:'Lucky Charm', icon:'🍀', maxLevel:5, baseCost:350, growth:1.7,
+   desc:'Increases the resale value multiplier when you flip items for profit.'},
+  {id:'pokerface', name:'Poker Face', icon:'🎭', maxLevel:5, baseCost:380, growth:1.7,
+   desc:'Intimidates rival bidders, making them slightly more likely to fold.'},
+  {id:'quickfingers', name:'Quick Fingers', icon:'⚡', maxLevel:5, baseCost:300, growth:1.65,
+   desc:'Extends the auction clock slightly so you never miss a bid window.'},
+];
+
+const ACHIEVEMENT_DEFS = [
+  {id:'first_win', name:'First Blood', icon:'🔨', desc:'Win your very first auction.',
+   check:s=>s.stats.auctionsWon>=1},
+  {id:'high_roller', name:'High Roller', icon:'💵', desc:'Win a single auction with a bid over $5,000.',
+   check:s=>s.stats.highestBid>=5000},
+  {id:'flipper', name:'The Flipper', icon:'📈', desc:'Sell an item for over $1,000 profit.',
+   check:s=>s.stats.bestFlipProfit>=1000},
+  {id:'collector', name:'Collector', icon:'🗃️', desc:'Hold 5 unsold items in your inventory at once.',
+   check:s=>s.inventory.length>=5},
+  {id:'iron_will', name:'Iron Will', icon:'🛡️', desc:'Win 10 auctions total.',
+   check:s=>s.stats.auctionsWon>=10},
+  {id:'tycoon', name:'Tycoon', icon:'🏦', desc:'Reach a bankroll of $10,000.',
+   check:s=>s.money>=10000},
+  {id:'mogul', name:'Mogul', icon:'👑', desc:'Reach a bankroll of $50,000.',
+   check:s=>s.money>=50000},
+  {id:'upgrade_fan', name:'Upgrade Enthusiast', icon:'🛠️', desc:'Purchase 10 total upgrade levels.',
+   check:s=>s.stats.upgradesPurchased>=10},
+  {id:'survivor', name:'Survivor', icon:'🩹', desc:'Recover from bankruptcy and keep playing.',
+   check:s=>s.stats.bankruptcies>=1},
+  {id:'bargain', name:'Perfectionist', icon:'🎯', desc:'Win an auction paying less than 50% of true value.',
+   check:s=>s.stats.biggestBargainPct<=50 && s.stats.auctionsWon>=1},
+  {id:'veteran', name:'Auction Veteran', icon:'📜', desc:'Survive to round 10.',
+   check:s=>s.round>=10},
+  {id:'sweep', name:'Clean Sweep', icon:'🧹', desc:'Win 5 auctions in a single round.',
+   check:s=>s.stats.wonInRoundMax>=5},
+];
+
+/* ================================================================
+   SAVE MANAGER
+   ================================================================ */
+const SAVE_KEY = 'bidmaster_save_v1';
+const SaveManager = {
+  defaultState(){
+    return {
+      money: 1000,
+      round: 1,
+      itemIndexInRound: 0,
+      itemsPerRound: 5,
+      inventory: [],
+      upgrades: {appraisal:0, negotiator:0, pockets:0, luck:0, pokerface:0, quickfingers:0},
+      achievements: {},
+      stats: {
+        auctionsWon:0, auctionsLostToAI:0, itemsUnsold:0, totalSpent:0, totalEarned:0,
+        highestBid:0, itemsFlipped:0, bestFlipProfit:0, bankruptcies:0,
+        upgradesPurchased:0, biggestBargainPct:100, wonInRound:0, wonInRoundMax:0
+      },
+      settings: {sfxVolume:0.6, animations:true, muted:false},
+      aiBudgets: {},
+      hasRunInProgress:false,
+      victoryClaimed:false
+    };
+  },
+  load(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return null;
+      const parsed = JSON.parse(raw);
+      // merge with defaults to survive future field additions
+      const def = this.defaultState();
+      return Object.assign({}, def, parsed, {
+        upgrades: Object.assign({}, def.upgrades, parsed.upgrades),
+        stats: Object.assign({}, def.stats, parsed.stats),
+        settings: Object.assign({}, def.settings, parsed.settings),
+        achievements: Object.assign({}, def.achievements, parsed.achievements),
+      });
+    }catch(e){ return null; }
+  },
+  save(state){
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ /* storage unavailable */ }
+  },
+  wipe(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+};
+
+/* ================================================================
+   TOAST / SCREEN HELPERS
+   ================================================================ */
+function showToast(msg, icon){
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = (icon?icon+' ':'') + msg;
+  container.appendChild(el);
+  setTimeout(()=> el.remove(), 3000);
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showOverlay(id){ document.getElementById(id).classList.remove('hidden'); }
+function hideOverlay(id){ document.getElementById(id).classList.add('hidden'); }
+function confirmDialog(title, text, onYes){
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-text').textContent = text;
+  showOverlay('overlay-confirm');
+  const yesBtn = document.getElementById('btn-confirm-yes');
+  const noBtn = document.getElementById('btn-confirm-no');
+  const cleanup = ()=>{
+    yesBtn.onclick = null; noBtn.onclick = null;
+    hideOverlay('overlay-confirm');
+  };
+  yesBtn.onclick = ()=>{ cleanup(); onYes(); };
+  noBtn.onclick = ()=>{ cleanup(); };
+}
+
+/* ================================================================
+   MAIN GAME CONTROLLER
+   ================================================================ */
+class Game{
+  constructor(){
+    this.state = SaveManager.load() || SaveManager.defaultState();
+    this.auction = null;         // active auction runtime object
+    this.tickHandle = null;
+    this.paused = false;
+    this.currentItemDef = null;
+    this.pendingResult = null;   // holds info while result overlay is open
+    this._bindUI();
+    this._renderMenu();
+    Sound.setVolumeFromState = ()=>{};
+    Sound.volume = this.state.settings.sfxVolume;
+    Sound.muted = this.state.settings.muted;
+    FX.enabled = this.state.settings.animations;
+    this._syncSettingsUI();
+  }
+
+  /* ---------- persistence ---------- */
+  save(){ SaveManager.save(this.state); }
+
+  /* ---------- UI BINDING ---------- */
+  _bindUI(){
+    document.getElementById('btn-new-game').onclick = ()=> this.confirmNewRun();
+    document.getElementById('btn-continue').onclick = ()=> this.continueRun();
+    document.getElementById('btn-shop').onclick = ()=> { this.renderShop(); showScreen('screen-shop'); };
+    document.getElementById('btn-achievements').onclick = ()=> { this.renderAchievements(); showScreen('screen-achievements'); };
+    document.getElementById('btn-stats').onclick = ()=> { this.renderStats(); showScreen('screen-stats'); };
+    document.getElementById('btn-settings').onclick = ()=> showScreen('screen-settings');
+
+    document.querySelectorAll('[data-back]').forEach(btn=>{
+      btn.onclick = ()=> { Sound.playClick(); this._returnFromSubpage(); };
+    });
+
+    document.getElementById('btn-pause').onclick = ()=> this.togglePause(true);
+    document.getElementById('btn-resume').onclick = ()=> this.togglePause(false);
+    document.getElementById('btn-pause-shop').onclick = ()=> { this.renderShop(); this._subpageReturnsTo='pauseGame'; showScreen('screen-shop'); };
+    document.getElementById('btn-pause-settings').onclick = ()=> { this._subpageReturnsTo='pauseGame'; showScreen('screen-settings'); };
+    document.getElementById('btn-pause-quit').onclick = ()=> {
+      confirmDialog('Quit to Menu?','Your progress is auto-saved, so you can continue later.', ()=>{
+        this._teardownAuction();
+        hideOverlay('overlay-pause');
+        this.save();
+        this._renderMenu();
+        showScreen('screen-menu');
+      });
+    };
+
+    document.getElementById('btn-bid-small').onclick = ()=> this.playerBid('small');
+    document.getElementById('btn-bid-med').onclick = ()=> this.playerBid('med');
+    document.getElementById('btn-bid-large').onclick = ()=> this.playerBid('large');
+    document.getElementById('btn-pass').onclick = ()=> this.playerPass();
+
+    document.getElementById('btn-sell-now').onclick = ()=> this.sellPendingItem();
+    document.getElementById('btn-keep-item').onclick = ()=> this.keepPendingItem();
+    document.getElementById('btn-result-continue').onclick = ()=> this.dismissResult();
+
+    document.getElementById('btn-round-continue').onclick = ()=> {
+      hideOverlay('overlay-round');
+      Sound.playClick();
+      this.loadNextItem();
+    };
+
+    document.getElementById('btn-try-again').onclick = ()=> this.confirmNewRun(true);
+    document.getElementById('btn-gameover-menu').onclick = ()=> { this._renderMenu(); showScreen('screen-menu'); };
+    document.getElementById('btn-victory-continue').onclick = ()=> { this.state.victoryClaimed=true; this.save(); showScreen('screen-game'); this.resumeAuctionAfterOverlay(); };
+    document.getElementById('btn-victory-menu').onclick = ()=> { this.state.victoryClaimed=true; this.save(); this._renderMenu(); showScreen('screen-menu'); };
+
+    document.getElementById('range-volume').oninput = (e)=>{
+      const v = e.target.value/100;
+      this.state.settings.sfxVolume = v; Sound.volume = v; this.save();
+    };
+    document.getElementById('toggle-animations').onclick = (e)=>{
+      this.state.settings.animations = !this.state.settings.animations;
+      FX.enabled = this.state.settings.animations;
+      e.target.classList.toggle('on', this.state.settings.animations);
+      this.save();
+    };
+    document.getElementById('toggle-mute').onclick = (e)=>{
+      this.state.settings.muted = !this.state.settings.muted;
+      Sound.muted = this.state.settings.muted;
+      e.target.classList.toggle('on', this.state.settings.muted);
+      this.save();
+    };
+    document.getElementById('btn-reset-save').onclick = ()=>{
+      confirmDialog('Reset all progress?','This will erase your bankroll, upgrades, achievements and stats permanently.', ()=>{
+        SaveManager.wipe();
+        this.state = SaveManager.defaultState();
+        Sound.volume = this.state.settings.sfxVolume; Sound.muted = this.state.settings.muted;
+        FX.enabled = this.state.settings.animations;
+        this._syncSettingsUI();
+        this._renderMenu();
+        showScreen('screen-menu');
+        showToast('Progress reset','🗑️');
+      });
+    };
+  }
+
+  _syncSettingsUI(){
+    document.getElementById('range-volume').value = Math.round(this.state.settings.sfxVolume*100);
+    document.getElementById('toggle-animations').classList.toggle('on', this.state.settings.animations);
+    document.getElementById('toggle-mute').classList.toggle('on', this.state.settings.muted);
+  }
+
+  _returnFromSubpage(){
+    if(this._subpageReturnsTo === 'pauseGame'){
+      this._subpageReturnsTo = null;
+      showScreen('screen-game');
+      showOverlay('overlay-pause');
+    } else {
+      showScreen('screen-menu');
+      this._renderMenu();
+    }
+  }
+
+  _renderMenu(){
+    document.getElementById('menu-money').textContent = Util.money(this.state.money);
+    document.getElementById('menu-round').textContent = this.state.round;
+    document.getElementById('btn-continue').disabled = !this.state.hasRunInProgress;
+    document.getElementById('btn-continue').style.opacity = this.state.hasRunInProgress ? '1':'0.4';
+  }
+
+  /* ---------- RUN LIFECYCLE ---------- */
+  confirmNewRun(fromGameOver){
+    Sound.playClick();
+    const startFresh = ()=>{
+      const st = this.state;
+      st.money = 1000 + st.upgrades.pockets*250;
+      st.round = 1;
+      st.itemIndexInRound = 0;
+      st.inventory = [];
+      st.hasRunInProgress = true;
+      st.stats.wonInRound = 0;
+      st.aiBudgets = {};
+      AI_PROFILES.forEach(p=> st.aiBudgets[p.id] = p.baseBudget);
+      this.save();
+      showScreen('screen-game');
+      this.loadNextItem();
+    };
+    if(!fromGameOver && this.state.hasRunInProgress && (this.state.round>1 || this.state.money!==1000+this.state.upgrades.pockets*250)){
+      confirmDialog('Start a new run?','Your current run in progress will be lost (upgrades & achievements are kept).', startFresh);
+    } else {
+      startFresh();
+    }
+  }
+
+  continueRun(){
+    if(!this.state.hasRunInProgress) return;
+    Sound.playClick();
+    if(Object.keys(this.state.aiBudgets).length===0){
+      AI_PROFILES.forEach(p=> this.state.aiBudgets[p.id] = p.baseBudget);
+    }
+    showScreen('screen-game');
+    this.loadNextItem();
+  }
+
+  /* ---------- DIFFICULTY ---------- */
+  difficultyMultiplier(){ return 1 + (this.state.round-1)*0.15; }
+  activeAiCount(){
+    const r = this.state.round;
+    if(r<=2) return 2;
+    if(r<=5) return 3;
+    return 4;
+  }
+  auctionTimeMs(){
+    const base = 20000 - Math.min(this.state.round*300, 6000);
+    return base + this.state.upgrades.quickfingers*1200;
+  }
+
+  /* ---------- ITEM GENERATION ---------- */
+  generateItem(){
+    const def = Util.choice(ITEM_TYPES);
+    const diff = this.difficultyMultiplier();
+    const trueValue = Util.roundNice(Util.rand(def.min, def.max) * diff);
+    const spread = Util.clamp(0.30 - this.state.upgrades.appraisal*0.05, 0.05, 0.30);
+    const estLow = Util.roundNice(trueValue * (1-spread));
+    const estHigh = Util.roundNice(trueValue * (1+spread));
+    return {
+      id: Util.uid(), name: def.name, icon: def.icon, category: def.category,
+      trueValue, estLow, estHigh
+    };
+  }
+
+  /* ---------- MAIN FLOW: LOAD NEXT ITEM ---------- */
+  loadNextItem(){
+    this._teardownAuction();
+    const st = this.state;
+    if(st.itemIndexInRound >= st.itemsPerRound){
+      this._showRoundSummary();
+      return;
+    }
+    st.itemIndexInRound++;
+    this.currentItemDef = this.generateItem();
+    this._startAuction(this.currentItemDef);
+    this.save();
+  }
+
+  _showRoundSummary(){
+    const st = this.state;
+    const bonus = 100 + st.upgrades.pockets*100 + st.round*15;
+    st.money += bonus;
+    st.stats.wonInRoundMax = Math.max(st.stats.wonInRoundMax||0, st.stats.wonInRound||0);
+    document.getElementById('round-summary-text').textContent =
+      `You completed round ${st.round} with ${st.stats.wonInRound||0} lot(s) won.`;
+    document.getElementById('round-bonus').textContent = '+' + Util.money(bonus) + ' round bonus';
+    st.round++;
+    st.itemIndexInRound = 0;
+    st.stats.wonInRound = 0;
+    // replenish AI budgets slightly each round
+    AI_PROFILES.forEach(p=>{
+      st.aiBudgets[p.id] = (st.aiBudgets[p.id]||p.baseBudget) + p.baseBudget*0.3 + st.round*20;
+    });
+    this.save();
+    this._checkAchievements();
+    showOverlay('overlay-round');
+    Sound.playCoin();
+  }
+
+  /* ---------- AUCTION RUNTIME ---------- */
+  _startAuction(item){
+    const st = this.state;
+    const startingBid = Util.roundNice(item.trueValue*0.15) || 50;
+    const nAI = this.activeAiCount();
+    const aiPool = AI_PROFILES.slice(0,nAI).map(profile=>({
+      profile,
+      noise: Util.rand(profile.noiseRange[0], profile.noiseRange[1]),
+      active: true,
+      budget: st.aiBudgets[profile.id] !== undefined ? st.aiBudgets[profile.id] : profile.baseBudget,
+      nextCheck: Util.randInt(700,2200),
+      thinking:false
+    }));
+
+    this.auction = {
+      item,
+      currentBid: startingBid,
+      hasBid: false,
+      leaderType: 'none',  // 'none' | 'player' | 'ai'
+      leaderName: '',
+      leaderAiId: null,
+      timeLeft: this.auctionTimeMs(),
+      maxTime: this.auctionTimeMs(),
+      playerActive: true,
+      aiStates: aiPool,
+      log: [],
+      ended: false
+    };
+
+    // Render item card
+    document.getElementById('item-icon').textContent = item.icon;
+    document.getElementById('item-name').textContent = item.name;
+    document.getElementById('item-category').textContent = item.category;
+    document.getElementById('item-estimate').textContent = Util.money(item.estLow)+' – '+Util.money(item.estHigh);
+    document.getElementById('hud-round').textContent = st.round;
+    document.getElementById('hud-item').textContent = st.itemIndexInRound;
+    document.getElementById('hud-item-total').textContent = st.itemsPerRound;
+    document.getElementById('hud-money').textContent = Util.money(st.money);
+    document.getElementById('auction-log').innerHTML = '';
+    this._addLog('sys', `Bidding opens on the ${item.name}. Starting bid ${Util.money(startingBid)}.`);
+    this._renderBidState();
+    this._renderAIPanel();
+    this._updateBidButtonLabels();
+
+    this.tickHandle = setInterval(()=> this._tick(), 100);
+  }
+
+  _teardownAuction(){
+    if(this.tickHandle){ clearInterval(this.tickHandle); this.tickHandle=null; }
+    this.auction = null;
+  }
+
+  _computeIncrements(currentBid){
+    const small = Util.roundNice(Math.max(10, currentBid*0.05));
+    const med = Util.roundNice(Math.max(30, currentBid*0.14));
+    const large = Util.roundNice(Math.max(60, currentBid*0.28));
+    return {small, med, large};
+  }
+  _updateBidButtonLabels(){
+    if(!this.auction) return;
+    const inc = this._computeIncrements(this.auction.currentBid);
+    document.getElementById('btn-bid-small').textContent = '+'+Util.money(inc.small);
+    document.getElementById('btn-bid-med').textContent = '+'+Util.money(inc.med);
+    document.getElementById('btn-bid-large').textContent = '+'+Util.money(inc.large);
+    this.auction._increments = inc;
+  }
+
+  _addLog(cls, text){
+    const log = document.getElementById('auction-log');
+    const div = document.createElement('div');
+    div.className = cls;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    if(this.auction) this.auction.log.push({cls,text});
+    while(log.children.length>40) log.removeChild(log.firstChild);
+  }
+
+  _renderBidState(){
+    const a = this.auction;
+    document.getElementById('current-bid').textContent = a.hasBid ? Util.money(a.currentBid) : Util.money(a.currentBid);
+    const bidderEl = document.getElementById('current-bidder');
+    if(!a.hasBid){
+      bidderEl.textContent = 'No bids yet — be the first!';
+      bidderEl.className = 'current-bidder';
+    } else if(a.leaderType==='player'){
+      bidderEl.textContent = 'You are the highest bidder!';
+      bidderEl.className = 'current-bidder you';
+    } else {
+      bidderEl.textContent = a.leaderName + ' is leading the bid.';
+      bidderEl.className = 'current-bidder ai';
+    }
+    const pct = Util.clamp(a.timeLeft / a.maxTime, 0, 1) * 100;
+    const bar = document.getElementById('timer-bar');
+    bar.style.width = pct+'%';
+    bar.classList.toggle('warn', pct < 30);
+
+    const disablePlayer = !a.playerActive || a.ended;
+    document.getElementById('btn-bid-small').disabled = disablePlayer;
+    document.getElementById('btn-bid-med').disabled = disablePlayer;
+    document.getElementById('btn-bid-large').disabled = disablePlayer;
+    document.getElementById('btn-pass').disabled = disablePlayer;
+  }
+
+  _renderAIPanel(){
+    const panel = document.getElementById('ai-panel');
+    panel.innerHTML = '';
+    this.auction.aiStates.forEach(ai=>{
+      const card = document.createElement('div');
+      card.className = 'ai-card' + (!ai.active?' out':'') + (this.auction.leaderAiId===ai.profile.id?' leading':'');
+      const budgetPct = Util.clamp(ai.budget / ai.profile.baseBudget, 0, 1)*100;
+      card.innerHTML = `
+        <div class="ai-head">
+          <div class="ai-avatar">${ai.profile.avatar}</div>
+          <div>
+            <div class="ai-name">${ai.profile.name}</div>
+            <div class="ai-type">${ai.profile.type}</div>
+          </div>
+        </div>
+        <div class="ai-budget-wrap"><div class="ai-budget-bar" style="width:${budgetPct}%"></div></div>
+        <div class="ai-status">${!ai.active ? 'Passed' : (ai.thinking ? 'thinking<span class="ai-thinking"><span>.</span><span>.</span><span>.</span></span>' : '&nbsp;')}</div>
+      `;
+      panel.appendChild(card);
+    });
+  }
+
+  /* ---------- TICK LOOP ---------- */
+  _tick(){
+    if(this.paused) return;
+    const a = this.auction;
+    if(!a || a.ended) return;
+
+    a.timeLeft -= 100;
+    if(a.timeLeft <= 3000 && a.timeLeft > 2900) Sound.playTick();
+
+    // AI decision cycle
+    a.aiStates.forEach(ai=>{
+      if(!ai.active) return;
+      ai.nextCheck -= 100;
+      if(ai.nextCheck <= 0){
+        this._aiDecide(ai);
+        ai.nextCheck = Util.randInt(900, 2400);
+      }
+    });
+
+    // Check early-end conditions
+    const anyAiActive = a.aiStates.some(ai=>ai.active);
+    if(!anyAiActive && a.playerActive && a.hasBid && a.leaderType==='player'){
+      a.timeLeft = Math.min(a.timeLeft, 2200);
+    }
+    if(!a.playerActive && !anyAiActive){
+      a.timeLeft = Math.min(a.timeLeft, 500);
+    }
+
+    this._renderBidState();
+
+    if(a.timeLeft <= 0){
+      this._endAuction();
+      return;
+    }
+  }
+
+  _aiDecide(ai){
+    const a = this.auction;
+    const inc = this._computeIncrements(a.currentBid);
+    const nextAmount = a.currentBid + (a.hasBid ? inc.small : 0);
+    const bidTarget = a.hasBid ? a.currentBid + inc.small : a.currentBid;
+    const item = a.item;
+    const estimate = item.trueValue * ai.noise;
+    let willingness = Util.rand(ai.profile.willRange[0], ai.profile.willRange[1]);
+    if(a.leaderType==='player'){
+      willingness *= (1 - this.state.upgrades.pokerface*0.03);
+    }
+    const maxWilling = estimate * willingness;
+    const canAfford = bidTarget <= ai.budget;
+    const wantsToBid = bidTarget <= maxWilling;
+    const rollsProb = Math.random() < (ai.profile.id==='wendy' ? Util.rand(0.3,0.9) : ai.profile.bidProb);
+    const alreadyLeading = a.leaderType==='ai' && a.leaderAiId===ai.profile.id;
+
+    if(!alreadyLeading && canAfford && wantsToBid && rollsProb){
+      a.currentBid = bidTarget;
+      a.hasBid = true;
+      a.leaderType = 'ai';
+      a.leaderName = ai.profile.name;
+      a.leaderAiId = ai.profile.id;
+      a.timeLeft = Math.min(a.maxTime, a.timeLeft + a.maxTime*0.35);
+      this._addLog('foe', `${ai.profile.name} bids ${Util.money(a.currentBid)}.`);
+      Sound.playAiBid();
+      this._updateBidButtonLabels();
+    } else if(!alreadyLeading){
+      ai.active = false;
+      this._addLog('foe', `${ai.profile.name} passes.`);
+    }
+    this._renderAIPanel();
+  }
+
+  playerBid(tier){
+    const a = this.auction;
+    if(!a || a.ended || !a.playerActive) return;
+    const inc = a._increments || this._computeIncrements(a.currentBid);
+    const amount = a.hasBid ? a.currentBid + inc[tier] : a.currentBid;
+    if(amount > this.state.money){
+      Sound.playError();
+      showToast("You can't afford that bid!", '⚠️');
+      const panel = document.querySelector('.item-panel');
+      panel.classList.add('shake');
+      setTimeout(()=>panel.classList.remove('shake'), 400);
+      return;
+    }
+    a.currentBid = amount;
+    a.hasBid = true;
+    a.leaderType = 'player';
+    a.leaderName = 'You';
+    a.leaderAiId = null;
+    a.timeLeft = a.maxTime;
+    this._addLog('me', `You bid ${Util.money(a.currentBid)}.`);
+    Sound.playBid();
+    this._updateBidButtonLabels();
+    this._renderBidState();
+    this._renderAIPanel();
+  }
+
+  playerPass(){
+    const a = this.auction;
+    if(!a || a.ended || !a.playerActive) return;
+    a.playerActive = false;
+    this._addLog('me', 'You pass.');
+    Sound.playPass();
+    this._renderBidState();
+  }
+
+  /* ---------- END OF AUCTION ---------- */
+  _endAuction(){
+    const a = this.auction;
+    if(a.ended) return;
+    a.ended = true;
+    clearInterval(this.tickHandle); this.tickHandle=null;
+    const st = this.state;
+
+    if(!a.hasBid){
+      st.stats.itemsUnsold++;
+      this._addLog('sys', 'No bids were placed. The lot goes unsold.');
+      this._showResultPopup('unsold');
+      return;
+    }
+
+    if(a.leaderType === 'player'){
+      let finalBid = a.currentBid;
+      // negotiator upgrade: chance for discount
+      const discountChance = st.upgrades.negotiator*0.08;
+      let discounted = false;
+      if(Math.random() < discountChance){
+        finalBid = Math.round(finalBid * Util.rand(0.82,0.92));
+        discounted = true;
+      }
+      st.money -= finalBid;
+      st.stats.totalSpent += finalBid;
+      st.stats.auctionsWon++;
+      st.stats.wonInRound = (st.stats.wonInRound||0)+1;
+      st.stats.highestBid = Math.max(st.stats.highestBid, finalBid);
+      const bargainPct = Math.round((finalBid / a.item.trueValue)*100);
+      st.stats.biggestBargainPct = Math.min(st.stats.biggestBargainPct, bargainPct);
+      const invItem = {id:Util.uid(), name:a.item.name, icon:a.item.icon, category:a.item.category,
+        trueValue:a.item.trueValue, paid:finalBid};
+      this._pendingWonItem = invItem;
+      this._addLog('sys', discounted ? `Sold! You negotiated a discount and paid only ${Util.money(finalBid)}.` : `Sold to you for ${Util.money(finalBid)}!`);
+      this.save();
+      this._showResultPopup('won', invItem, discounted);
+      FX.spawnConfetti(window.innerWidth/2, window.innerHeight*0.35, 50);
+      Sound.playWin();
+    } else {
+      // AI won
+      st.aiBudgets[a.leaderAiId] = Math.max(0, (st.aiBudgets[a.leaderAiId]||0) - a.currentBid);
+      st.stats.auctionsLostToAI++;
+      this._addLog('sys', `${a.leaderName} wins the lot for ${Util.money(a.currentBid)}.`);
+      this.save();
+      this._showResultPopup('lost');
+    }
+  }
+
+  _showResultPopup(kind, invItem, discounted){
+    const iconEl = document.getElementById('result-icon');
+    const titleEl = document.getElementById('result-title');
+    const descEl = document.getElementById('result-desc');
+    const amountEl = document.getElementById('result-amount');
+    const sellChoice = document.getElementById('result-sell-choice');
+    const contChoice = document.getElementById('result-continue-choice');
+
+    if(kind==='won'){
+      iconEl.textContent = invItem.icon;
+      titleEl.textContent = 'Sold!';
+      descEl.textContent = `You won the ${invItem.name} for ${Util.money(invItem.paid)}.` + (discounted?' Your Silver Tongue got you a discount!':'');
+      amountEl.textContent = Util.money(invItem.paid);
+      sellChoice.classList.remove('hidden');
+      contChoice.classList.add('hidden');
+      this.pendingResult = invItem;
+    } else if(kind==='lost'){
+      iconEl.textContent = '🔨';
+      titleEl.textContent = 'Outbid!';
+      descEl.textContent = 'A rival bidder took this one home. Better luck on the next lot.';
+      amountEl.textContent = '';
+      sellChoice.classList.add('hidden');
+      contChoice.classList.remove('hidden');
+      this.pendingResult = null;
+    } else {
+      iconEl.textContent = '📦';
+      titleEl.textContent = 'Unsold';
+      descEl.textContent = 'Nobody placed a bid. The lot returns to storage.';
+      amountEl.textContent = '';
+      sellChoice.classList.add('hidden');
+      contChoice.classList.remove('hidden');
+      this.pendingResult = null;
+    }
+    showOverlay('overlay-result');
+    this._checkAchievements();
+  }
+
+  sellPendingItem(){
+    const item = this.pendingResult;
+    if(!item) return;
+    const luckMul = 1 + this.state.upgrades.luck*0.05;
+    const salePrice = Util.roundNice(item.trueValue * Util.rand(0.9,1.15) * luckMul);
+    const profit = salePrice - item.paid;
+    this.state.money += salePrice;
+    this.state.stats.totalEarned += salePrice;
+    this.state.stats.itemsFlipped++;
+    this.state.stats.bestFlipProfit = Math.max(this.state.stats.bestFlipProfit, profit);
+    this.save();
+    Sound.playCoin();
+    FX.spawnCoins(window.innerWidth/2, window.innerHeight*0.4, 16);
+    showToast(`Sold for ${Util.money(salePrice)} (${profit>=0?'+':''}${Util.money(profit)} profit)`, '💵');
+    hideOverlay('overlay-result');
+    this._checkAchievements();
+    this._afterResultClosed();
+  }
+
+  keepPendingItem(){
+    const item = this.pendingResult;
+    if(item){
+      this.state.inventory.push(item);
+      this.save();
+      showToast('Item stored in your inventory.', '🗃️');
+    }
+    hideOverlay('overlay-result');
+    this._checkAchievements();
+    this._afterResultClosed();
+  }
+
+  dismissResult(){
+    hideOverlay('overlay-result');
+    this._afterResultClosed();
+  }
+
+  _afterResultClosed(){
+    document.getElementById('hud-money').textContent = Util.money(this.state.money);
+    if(this._checkGameOver()) return;
+    if(this._checkVictory()) return;
+    this.loadNextItem();
+  }
+
+  resumeAuctionAfterOverlay(){
+    // Used after victory 'keep playing' — continue right where we left off
+    if(!this.auction) this.loadNextItem();
+  }
+
+  /* ---------- PAUSE ---------- */
+  togglePause(pause){
+    this.paused = pause;
+    Sound.playClick();
+    if(pause) showOverlay('overlay-pause'); else hideOverlay('overlay-pause');
+  }
+
+  /* ---------- GAME OVER / VICTORY CHECKS ---------- */
+  _checkGameOver(){
+    const st = this.state;
+    const cheapestBid = 20;
+    if(st.money < cheapestBid && st.inventory.length===0){
+      st.stats.bankruptcies++;
+      st.hasRunInProgress = false;
+      this._teardownAuction();
+      this.save();
+      document.getElementById('gameover-round').textContent = st.round;
+      document.getElementById('gameover-won').textContent = st.stats.auctionsWon;
+      document.getElementById('gameover-text').textContent = "You ran out of money and have no items left to sell.";
+      showScreen('screen-gameover');
+      Sound.playLose();
+      this._checkAchievements();
+      return true;
+    }
+    return false;
+  }
+  _checkVictory(){
+    const st = this.state;
+    if(st.money >= 100000 && !st.victoryClaimed){
+      this._teardownAuction();
+      document.getElementById('victory-money').textContent = Util.money(st.money);
+      showScreen('screen-victory');
+      Sound.playWin();
+      FX.spawnConfetti(window.innerWidth/2, window.innerHeight*0.3, 80);
+      return true;
+    }
+    return false;
+  }
+
+  /* ---------- ACHIEVEMENTS ---------- */
+  _checkAchievements(){
+    let unlockedAny = false;
+    ACHIEVEMENT_DEFS.forEach(def=>{
+      if(!this.state.achievements[def.id] && def.check(this.state)){
+        this.state.achievements[def.id] = true;
+        unlockedAny = true;
+        showToast(`Achievement unlocked: ${def.name}`, def.icon);
+        Sound.playAchievement();
+      }
+    });
+    if(unlockedAny) this.save();
+  }
+
+  /* ---------- SHOP RENDERING ---------- */
+  renderShop(){
+    document.getElementById('shop-money').textContent = Util.money(this.state.money);
+    const grid = document.getElementById('upgrade-grid');
+    grid.innerHTML = '';
+    UPGRADE_DEFS.forEach(def=>{
+      const level = this.state.upgrades[def.id];
+      const maxed = level >= def.maxLevel;
+      const cost = Math.round(def.baseCost * Math.pow(def.growth, level));
+      const card = document.createElement('div');
+      card.className = 'panel-card';
+      let dots = '';
+      for(let i=0;i<def.maxLevel;i++) dots += `<div class="level-dot ${i<level?'filled':''}"></div>`;
+      card.innerHTML = `
+        <div class="upgrade-icon">${def.icon}</div>
+        <div class="upgrade-name">${def.name}</div>
+        <div class="upgrade-desc">${def.desc}</div>
+        <div class="upgrade-level">Level ${level} / ${def.maxLevel}</div>
+        <div class="level-dots">${dots}</div>
+        <button class="btn ${maxed?'btn-outline':'btn-gold'} upgrade-buy" ${maxed?'disabled':''} data-upgrade="${def.id}">
+          ${maxed ? 'Max Level' : 'Upgrade — '+Util.money(cost)}
         </button>
+      `;
+      grid.appendChild(card);
+    });
+    grid.querySelectorAll('[data-upgrade]').forEach(btn=>{
+      btn.onclick = ()=> this.buyUpgrade(btn.getAttribute('data-upgrade'));
+    });
+    this._renderInventory();
+  }
 
-        <nav class="fixed bottom-0 w-full bg-white dark:bg-darkcard border-t dark:border-gray-800 flex justify-around p-3 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40">
-            <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex flex-col items-center text-blue-600 transition-colors">
-                <i class="fa-solid fa-house text-xl mb-1"></i>
-                <span class="text-xs">Domů</span>
-            </button>
-            <button onclick="switchTab('favorites')" id="nav-favorites" class="nav-btn flex flex-col items-center text-gray-400 dark:text-gray-500 transition-colors">
-                <i class="fa-solid fa-star text-xl mb-1"></i>
-                <span class="text-xs">Oblíbené</span>
-            </button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center text-gray-400 dark:text-gray-500 transition-colors">
-                <i class="fa-solid fa-gear text-xl mb-1"></i>
-                <span class="text-xs">Nastavení</span>
-            </button>
-        </nav>
-    </div>
+  buyUpgrade(id){
+    const def = UPGRADE_DEFS.find(u=>u.id===id);
+    const level = this.state.upgrades[id];
+    if(level >= def.maxLevel) return;
+    const cost = Math.round(def.baseCost * Math.pow(def.growth, level));
+    if(this.state.money < cost){
+      Sound.playError();
+      showToast('Not enough money for this upgrade.', '⚠️');
+      return;
+    }
+    this.state.money -= cost;
+    this.state.upgrades[id]++;
+    this.state.stats.upgradesPurchased++;
+    Sound.playCoin();
+    this.save();
+    showToast(`${def.name} upgraded to level ${this.state.upgrades[id]}!`, def.icon);
+    this._checkAchievements();
+    this.renderShop();
+    this._renderMenu();
+    if(document.getElementById('screen-game').classList.contains('active')){
+      document.getElementById('hud-money').textContent = Util.money(this.state.money);
+    }
+  }
 
-    <div id="promptModal" class="hidden fixed inset-0 bg-black/50 z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
-        <div class="bg-white dark:bg-darkcard w-full sm:w-[450px] h-[85vh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl p-6 flex flex-col shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="modalTitle" class="text-xl font-bold">Nový Prompt</h3>
-                <button onclick="closeModal()" class="text-gray-500 text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <input type="hidden" id="promptId">
-            <input type="text" id="promptTitle" placeholder="Název (např. Generátor emailů)" class="w-full p-3 mb-3 border dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
-            <select id="promptTag" class="w-full p-3 mb-3 border dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="Práce">Práce</option>
-                <option value="Kódování">Kódování</option>
-                <option value="Zábava">Zábava</option>
-                <option value="Ostatní">Ostatní</option>
-            </select>
-            <textarea id="promptText" placeholder="Zde vlož text promptu..." class="w-full p-3 mb-4 border dark:border-gray-700 rounded-xl flex-1 resize-none dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-            <button onclick="savePrompt()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-transform">Uložit prompt</button>
+  _renderInventory(){
+    const list = document.getElementById('inventory-list');
+    if(this.state.inventory.length===0){
+      list.innerHTML = '<p style="color:var(--muted); font-size:13.5px;">No unsold items — win auctions to fill your vault.</p>';
+      return;
+    }
+    list.innerHTML = '';
+    this.state.inventory.forEach((item,idx)=>{
+      const row = document.createElement('div');
+      row.className = 'inv-item';
+      row.innerHTML = `
+        <div class="inv-info">
+          <span style="font-size:22px;">${item.icon}</span>
+          <span>${item.name} <span style="color:var(--muted); font-size:12px;">(worth ~${Util.money(item.trueValue)})</span></span>
         </div>
-    </div>
+        <button class="btn btn-success inv-sell-btn" data-idx="${idx}">Sell</button>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('[data-idx]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const idx = parseInt(btn.getAttribute('data-idx'),10);
+        this.sellInventoryItem(idx);
+      };
+    });
+  }
 
-    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg opacity-0 pointer-events-none z-50 transition-all duration-300">
-        Akce byla úspěšná!
-    </div>
+  sellInventoryItem(idx){
+    const item = this.state.inventory[idx];
+    if(!item) return;
+    const luckMul = 1 + this.state.upgrades.luck*0.05;
+    const salePrice = Util.roundNice(item.trueValue * Util.rand(0.85,1.1) * luckMul);
+    const profit = salePrice - item.paid;
+    this.state.money += salePrice;
+    this.state.stats.totalEarned += salePrice;
+    this.state.stats.itemsFlipped++;
+    this.state.stats.bestFlipProfit = Math.max(this.state.stats.bestFlipProfit, profit);
+    this.state.inventory.splice(idx,1);
+    this.save();
+    Sound.playCoin();
+    FX.spawnCoins(window.innerWidth/2, window.innerHeight*0.4, 12);
+    showToast(`Sold for ${Util.money(salePrice)}`, '💵');
+    this._checkAchievements();
+    this.renderShop();
+    this._renderMenu();
+  }
 
-    <script>
-        let prompts = JSON.parse(localStorage.getItem('vault_prompts')) || [];
-        let currentFilter = 'Vše';
+  /* ---------- ACHIEVEMENTS RENDERING ---------- */
+  renderAchievements(){
+    const grid = document.getElementById('achievement-grid');
+    grid.innerHTML = '';
+    ACHIEVEMENT_DEFS.forEach(def=>{
+      const unlocked = !!this.state.achievements[def.id];
+      const card = document.createElement('div');
+      card.className = 'panel-card ach-card' + (unlocked?' unlocked':'');
+      card.innerHTML = `
+        <div class="upgrade-icon">${def.icon}</div>
+        <div class="upgrade-name">${def.name}</div>
+        <div class="upgrade-desc">${def.desc}</div>
+        <div class="ach-progress">${unlocked ? '✅ Unlocked' : '🔒 Locked'}</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
 
-        // Spuštění po načtení
-        window.onload = () => {
-            checkTheme();
-            renderPrompts();
-        };
+  /* ---------- STATS RENDERING ---------- */
+  renderStats(){
+    const s = this.state.stats;
+    const rows = [
+      ['Current Bankroll', Util.money(this.state.money)],
+      ['Current Round', this.state.round],
+      ['Auctions Won', s.auctionsWon],
+      ['Auctions Lost to Rivals', s.auctionsLostToAI],
+      ['Lots Unsold', s.itemsUnsold],
+      ['Total Spent at Auction', Util.money(s.totalSpent)],
+      ['Total Earned from Sales', Util.money(s.totalEarned)],
+      ['Highest Single Bid', Util.money(s.highestBid)],
+      ['Items Flipped for Profit', s.itemsFlipped],
+      ['Best Flip Profit', Util.money(s.bestFlipProfit)],
+      ['Times Bankrupt', s.bankruptcies],
+      ['Upgrades Purchased', s.upgradesPurchased],
+      ['Best Bargain (% of value paid)', (s.biggestBargainPct<100? s.biggestBargainPct+'%':'—')],
+    ];
+    const container = document.getElementById('stats-list');
+    container.innerHTML = rows.map(r=>`<div class="stat-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  }
+}
 
-        // --- UI LOGIKA ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('text-blue-600');
-                btn.classList.add('text-gray-400', 'dark:text-gray-500');
-            });
-            document.getElementById(`nav-${tabId}`).classList.replace('text-gray-400', 'text-blue-600');
-            document.getElementById(`nav-${tabId}`).classList.replace('dark:text-gray-500', 'text-blue-600');
+/* ================================================================
+   BOOT
+   ================================================================ */
+let GAME;
+window.addEventListener('DOMContentLoaded', ()=>{
+  GAME = new Game();
+});
 
-            document.getElementById('searchContainer').style.display = (tabId === 'home') ? 'block' : 'none';
-            if(tabId === 'settings') updateStats();
-        }
+// Autosave periodically and on unload
+setInterval(()=>{ if(window.GAME_INSTANCE) window.GAME_INSTANCE.save(); }, 15000);
+window.addEventListener('beforeunload', ()=>{ if(GAME) GAME.save(); });
 
-        function toggleTheme() {
-            const html = document.documentElement;
-            html.classList.toggle('dark');
-            const isDark = html.classList.contains('dark');
-            localStorage.setItem('vault_theme', isDark ? 'dark' : 'light');
-            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-        }
-
-        function checkTheme() {
-            if (localStorage.getItem('vault_theme') === 'dark' || (!('vault_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-                document.getElementById('themeIcon').className = 'fa-solid fa-sun';
-            }
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.opacity = '1';
-            setTimeout(() => toast.style.opacity = '0', 2500);
-        }
-
-        // --- CRUD LOGIKA ---
-        function setFilter(tag) {
-            currentFilter = tag;
-            document.querySelectorAll('.filter-tag').forEach(el => {
-                el.classList.remove('bg-blue-600', 'text-white');
-                el.classList.add('bg-gray-200', 'dark:bg-gray-800');
-                if(el.innerText === tag) {
-                    el.classList.replace('bg-gray-200', 'bg-blue-600');
-                    el.classList.replace('dark:bg-gray-800', 'bg-blue-600');
-                    el.classList.add('text-white');
-                }
-            });
-            renderPrompts();
-        }
-
-        function renderPrompts() {
-            const searchQ = document.getElementById('searchInput').value.toLowerCase();
-            const list = document.getElementById('promptsList');
-            const favList = document.getElementById('favoritesList');
-            
-            list.innerHTML = ''; favList.innerHTML = '';
-            
-            const filtered = prompts.filter(p => 
-                (currentFilter === 'Vše' || p.tag === currentFilter) &&
-                (p.title.toLowerCase().includes(searchQ) || p.text.toLowerCase().includes(searchQ))
-            );
-
-            if(filtered.length === 0) list.innerHTML = '<div class="text-center py-20 text-gray-400">Tady zatím nic není...</div>';
-
-            filtered.forEach(p => {
-                const card = createCard(p);
-                list.appendChild(card);
-                if(p.isFavorite) {
-                    const favCard = createCard(p);
-                    favList.appendChild(favCard);
-                }
-            });
-            updateStats();
-        }
-
-        function createCard(p) {
-            const div = document.createElement('div');
-            div.className = 'bg-white dark:bg-darkcard p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-all active:scale-[0.98]';
-            div.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-500 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-md">${p.tag}</span>
-                        <h4 class="font-bold text-lg mt-1 break-words">${p.title}</h4>
-                    </div>
-                    <button onclick="toggleFav(${p.id})" class="p-2 ${p.isFavorite ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'} transition-transform active:scale-125"><i class="fa-solid fa-star text-xl"></i></button>
-                </div>
-                <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-4 whitespace-pre-wrap">${p.text}</p>
-                <div class="flex justify-between items-center border-t dark:border-gray-800 pt-3">
-                    <span class="text-xs text-gray-400"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${p.uses || 0}x</span>
-                    <div class="flex gap-1">
-                        <button onclick="deletePrompt(${p.id})" class="w-9 h-9 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 transition"><i class="fa-solid fa-trash-can text-sm"></i></button>
-                        <button onclick="editPrompt(${p.id})" class="w-9 h-9 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition"><i class="fa-solid fa-pen text-sm"></i></button>
-                        <button onclick="sharePrompt(${p.id})" class="w-9 h-9 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition"><i class="fa-solid fa-share-nodes text-sm"></i></button>
-                        <button onclick="copyPrompt(${p.id})" class="ml-1 px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md active:scale-90 transition">Kopírovat</button>
-                    </div>
-                </div>
-            `;
-            return div;
-        }
-
-        function openModal() {
-            document.getElementById('promptId').value = '';
-            document.getElementById('promptTitle').value = '';
-            document.getElementById('promptText').value = '';
-            document.getElementById('modalTitle').innerText = 'Nový Prompt';
-            document.getElementById('promptModal').classList.remove('hidden');
-        }
-
-        function closeModal() { document.getElementById('promptModal').classList.add('hidden'); }
-
-        function savePrompt() {
-            const id = document.getElementById('promptId').value;
-            const title = document.getElementById('promptTitle').value;
-            const text = document.getElementById('promptText').value;
-            const tag = document.getElementById('promptTag').value;
-
-            if(!title || !text) return showToast('Vyplňte prosím vše!');
-
-            if(id) {
-                const index = prompts.findIndex(p => p.id == id);
-                prompts[index] = { ...prompts[index], title, text, tag };
-            } else {
-                prompts.unshift({ id: Date.now(), title, text, tag, isFavorite: false, uses: 0 });
-            }
-
-            localStorage.setItem('vault_prompts', JSON.stringify(prompts));
-            closeModal();
-            renderPrompts();
-            showToast('Prompt uložen!');
-        }
-
-        function editPrompt(id) {
-            const p = prompts.find(x => x.id === id);
-            document.getElementById('promptId').value = p.id;
-            document.getElementById('promptTitle').value = p.title;
-            document.getElementById('promptText').value = p.text;
-            document.getElementById('promptTag').value = p.tag;
-            document.getElementById('modalTitle').innerText = 'Upravit Prompt';
-            document.getElementById('promptModal').classList.remove('hidden');
-        }
-
-        function deletePrompt(id) {
-            if(confirm('Opravdu smazat?')) {
-                prompts = prompts.filter(p => p.id !== id);
-                localStorage.setItem('vault_prompts', JSON.stringify(prompts));
-                renderPrompts();
-                showToast('Prompt smazán');
-            }
-        }
-
-        function toggleFav(id) {
-            const p = prompts.find(x => x.id === id);
-            p.isFavorite = !p.isFavorite;
-            localStorage.setItem('vault_prompts', JSON.stringify(prompts));
-            renderPrompts();
-        }
-
-        function copyPrompt(id) {
-            const p = prompts.find(x => x.id === id);
-            navigator.clipboard.writeText(p.text).then(() => {
-                p.uses = (p.uses || 0) + 1;
-                localStorage.setItem('vault_prompts', JSON.stringify(prompts));
-                renderPrompts();
-                showToast('Zkopírováno do schránky!');
-            });
-        }
-
-        function sharePrompt(id) {
-            const p = prompts.find(x => x.id === id);
-            if (navigator.share) {
-                navigator.share({ title: p.title, text: p.text }).catch(() => {});
-            } else {
-                showToast('Sdílení není podporováno prohlížečem.');
-            }
-        }
-
-        // --- SYSTÉMOVÉ FUNKCE ---
-        function updateStats() {
-            document.getElementById('statTotal').innerText = prompts.length;
-            document.getElementById('statFav').innerText = prompts.filter(p => p.isFavorite).length;
-        }
-
-        function exportJSON() {
-            if(prompts.length === 0) return showToast('Nic k exportu!');
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(prompts));
-            const dlAnchor = document.createElement('a');
-            dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `prompty_${new Date().toLocaleDateString()}.json`);
-            dlAnchor.click();
-            showToast('Záloha stažena!');
-        }
-
-        function importJSON(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if(Array.isArray(imported)) {
-                        prompts = imported;
-                        localStorage.setItem('vault_prompts', JSON.stringify(prompts));
-                        renderPrompts();
-                        showToast('Import úspěšný!');
-                    }
-                } catch(err) { showToast('Neplatný soubor!'); }
-            };
-            reader.readAsText(file);
-        }
-    </script>
+})();
+</script>
 </body>
 </html>
